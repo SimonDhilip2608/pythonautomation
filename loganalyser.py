@@ -4,7 +4,7 @@ import psycopg2
 import json
 import pandas as pd
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 import os
 from dotenv import load_dotenv
 import sqlite3
@@ -543,8 +543,16 @@ def main():
                 transaction_id = st.text_input("Transaction ID")
 
             with col2:
-                start_time = st.datetime_input("Transaction Start Time")
-                end_time = st.datetime_input("Transaction End Time")
+                # Use date_input and time_input instead of datetime_input
+                start_date = st.date_input("Transaction Start Date")
+                start_time_input = st.time_input("Transaction Start Time")
+                # Combine date and time
+                start_time = datetime.combine(start_date, start_time_input)
+                
+                end_date = st.date_input("Transaction End Date")
+                end_time_input = st.time_input("Transaction End Time")
+                # Combine date and time
+                end_time = datetime.combine(end_date, end_time_input)
 
             submit_button = st.form_submit_button("Analyze Logs")
 
