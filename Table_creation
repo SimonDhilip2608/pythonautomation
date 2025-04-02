@@ -1,0 +1,25 @@
+CREATE TABLE IF NOT EXISTS LoggingApps (
+    app_id INTEGER PRIMARY KEY,
+    log_source TEXT NOT NULL,
+    app_name TEXT NOT NULL,
+    description TEXT
+)
+
+CREATE TABLE IF NOT EXISTS LoggingAppFields (
+    field_id INTEGER PRIMARY KEY,
+    logging_app_id INTEGER NOT NULL,
+    app_transaction_id TEXT NOT NULL,
+    app_transaction_id_description TEXT,
+    FOREIGN KEY (logging_app_id) REFERENCES LoggingApps (app_id)
+)
+
+CREATE TABLE IF NOT EXISTS AppEnrichmentAPI (
+    app_api_id INTEGER PRIMARY KEY,
+    logging_app_id INTEGER NOT NULL,
+    endpoint_name TEXT NOT NULL,
+    endpoint_url TEXT NOT NULL,
+    api_type TEXT NOT NULL,
+    request_schema TEXT,
+    response_schema TEXT,
+    FOREIGN KEY (logging_app_id) REFERENCES LoggingApps (app_id)
+)
