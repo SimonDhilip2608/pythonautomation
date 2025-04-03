@@ -11,7 +11,7 @@ class AIService:
     
     def __init__(self):
         """Initialize the AI service with API endpoint and token from environment."""
-        self.agents_url = os.getenv('INSPIRE_AGENTS_URL', 'https://gpu01-inspire-np.ebiz.verizon.com/agents-svc/api/v1')
+        self.agents_url = os.getenv('INSPIRE_AGENTS_URL')
         self.agents_token = os.getenv('INSPIRE_AGENTS_TOKEN')
     
     def is_configured(self):
