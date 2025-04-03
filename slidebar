@@ -1,0 +1,89 @@
+# In app.py, update the sidebar to include connection tests for all services
+
+with st.sidebar:
+    st.header("About Log Advisor")
+    st.markdown("""
+    **Log Advisor** helps you diagnose and resolve errors from system logs.
+    """)
+    
+    st.markdown("---")
+    
+    # Show connection status and test buttons for all services
+    st.subheader("Service Status")
+    
+    # ELK Service
+    elk_col1, elk_col2 = st.columns([3, 1])
+    with elk_col1:
+        elk_status = ":green[Connected]" if elk_service.is_configured() else ":red[Not Configured]"
+        st.markdown(f"ELK Service: {elk_status}")
+    with elk_col2:
+        if st.button("Test", key="test_elk"):
+            with st.spinner("Testing ELK connection..."):
+                success, message = elk_service.test_connection()
+                if success:
+                    st.success("Connected!")
+                else:
+                    st.error("Failed!")
+    
+    if elk_service.is_configured():
+        with st.expander("ELK Details"):
+            st.text(f"Endpoint: {elk_service.api_endpoint}")
+            st.text(f"Username: {elk_service.username}")
+            st.text(f"Password: {'*' * 8}")
+            
+            if 'elk_test_message' in locals():
+                if success:
+                    st.success(message)
+                else:
+                    st.error(message)
+    
+    # Vegas GPT Service
+    vegas_col1, vegas_col2 = st.columns([3, 1])
+    with vegas_col1:
+        vegas_status = ":green[Connected]" if vegas_service.is_configured() else ":red[Not Configured]"
+        st.markdown(f"Vegas GPT: {vegas_status}")
+    with vegas_col2:
+        if st.button("Test", key="test_vegas"):
+            with st.spinner("Testing Vegas GPT connection..."):
+                success, message = vegas_service.test_connection()
+                if success:
+                    st.success("Connected!")
+                else:
+                    st.error("Failed!")
+    
+    if vegas_service.is_configured():
+        with st.expander("Vegas GPT Details"):
+            st.text(f"URL: {vegas_service.agents_url}")
+            st.text(f"Token: {vegas_service.agents_token[:5]}...{vegas_service.agents_token[-4:] if vegas_service.agents_token else ''}")
+            
+            if 'vegas_test_message' in locals():
+                if success:
+                    st.success(message)
+                else:
+                    st.error(message)
+    
+    # Synapt Database Service
+    synapt_col1, synapt_col2 = st.columns([3, 1])
+    with synapt_col1:
+        synapt_status = ":green[Connected]" if synapt_service.is_configured() else ":red[Not Configured]"
+        st.markdown(f"Synapt DB: {synapt_status}")
+    with synapt_col2:
+        if st.button("Test", key="test_synapt"):
+            with st.spinner("Testing Synapt DB connection..."):
+                success, message = synapt_service.test_connection()
+                if success:
+                    st.success("Connected!")
+                else:
+                    st.error("Failed!")
+    
+    if synapt_service.is_configured():
+        with st.expander("Synapt DB Details"):
+            st.text(f"Host: {synapt_service.db_host}")
+            st.text(f"Database: {synapt_service.db_name}")
+            st.text(f"User: {synapt_service.db_user}")
+            
+            if 'synapt_test_message' in locals():
+                if success:
+                    st.success(message)
+                else:
+                    st.error(message)
