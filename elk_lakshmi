@@ -1,0 +1,77 @@
+from elasticsearch import Elasticsearch
+import pandas as pd
+from datetime import datetime
+
+def elk_search(es_host, index_name, namespace, message, start_date, end_date, user,pwd):
+    """
+    Perform an Elasticsearch search based on a message string and a date range within a given namespace.
+
+    :param es_host: Elasticsearch host URL
+    :param index_name: Name of the Elasticsearch index
+    :param namespace: Namespace to filter the search
+    :param message: Message string to search for
+    :param start_date: Start date of the range (YYYY-MM-DD format)
+    :param end_date: End date of the range (YYYY-MM-DD format)
+    :return: Search results
+    """
+    # Initialize Elasticsearch client
+    es = Elasticsearch([es_host],basic_auth=(user,pwd),verify_certs=False)
+
+    # Build the search query
+    query = {
+        "query": {
+            "bool": {
+                "minimum_should_match": 1,
+                "should": [
+                {
+                    "match_phrase": {
+                    "message": "147550"
+                    }
+                }
+                ],                                
+                "filter": {
+                    "range": {
+                        "@timestamp": {
+                            "gte": start_date,
+                            "lte": end_date
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    # Perform the search
+    response = es.search(index=index_name, body=query)
+    print(response)
+    hits = response['hits']['hits'] 
+    print(hits)
+
+    log_messages = [hit['_source'] for hit in hits]
+
+    df = pd.DataFrame(log_messages)
+
+    Log_Mes = df['message']
+    for log_m in reversed(Log_Mes):
+        str_comp = log_m.split(' ')
+        if 'Exception' in log_m or 'Error' in log_m:
+            print(str_comp[5:]) 
+            break;
+
+    return response
+
+# Example usage
+if __name__ == "__main__":
+    es_host = "https://abc-nst-abc.abc.com/"
+    user = 'abc'
+    pwd = 'abc@025'
+    index_name = "logs-*"
+    # Bind the search to your assigned role by specifying the namespace in the query
+    # Ensure that the namespace matches your role's permissions
+    namespace = "abc-abc-abc"
+    message = "147550"
+    start_date = "2025-04-01"
+    end_date = "2025-04-04"
+
+    results = elk_search(es_host, index_name, namespace, message, start_date, end_date,user,pwd)
+    print(results)
