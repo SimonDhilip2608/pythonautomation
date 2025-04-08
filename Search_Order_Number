@@ -1,0 +1,7 @@
+curl -X 'POST' \
+  'http://10.139.111.18:8000/Search_Order_Number/' \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "OrderRequest": "7915265940"
+}'
