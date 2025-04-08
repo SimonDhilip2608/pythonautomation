@@ -1,317 +1,196 @@
-# services/vegasgpt_service.py
+# services/elk_service.py
 import os
-import json
 import logging
-import requests
 import traceback
+from elasticsearch import Elasticsearch
+import pandas as pd
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
-class VegasGPTService:
-    """Service for analyzing logs using Verizon Inspire API."""
+class ELKService:
+    """Service for retrieving logs from ELK using the Elasticsearch Python client."""
     
     def __init__(self):
-        """Initialize the AI service with API endpoint and token from environment."""
-        self.agents_url = os.getenv('INSPIRE_AGENT_URL', '').rstrip('/')
-        self.agents_token = os.getenv('INSPIRE_AGENT_TOKEN')
+        """Initialize the ELK service with endpoint and credentials from environment."""
+        self.es_host = os.getenv('ELK_API_ENDPOINT')
+        self.username = os.getenv('ELK_USERNAME')
+        self.password = os.getenv('ELK_PASSWORD')
+        self.elk_index = os.getenv('ELK_INDEX', 'logs-*')
+        self.elk_namespace = os.getenv('ELK_NAMESPACE')
         
         # Debug logging for configuration
-        if not self.agents_url:
-            logger.warning("INSPIRE_AGENT_URL environment variable is not set")
-        if not self.agents_token:
-            logger.warning("INSPIRE_AGENT_TOKEN environment variable is not set")
-            
-        logger.info(f"Vegas GPT Service initialized with URL: {self.agents_url}")
+        if not self.es_host:
+            logger.warning("ELK_API_ENDPOINT environment variable is not set")
+        if not self.username:
+            logger.warning("ELK_USERNAME environment variable is not set")
+        if not self.password:
+            logger.warning("ELK_PASSWORD environment variable is not set")
+        
+        logger.info(f"ELK Service initialized with host: {self.es_host}, index: {self.elk_index}, namespace: {self.elk_namespace or 'None'}")
+        
+        # Initialize Elasticsearch client
+        self.client = None
+    
+    def get_client(self):
+        """Get or create an Elasticsearch client."""
+        if self.client is None and self.is_configured():
+            try:
+                self.client = Elasticsearch(
+                    [self.es_host],
+                    basic_auth=(self.username, self.password),
+                    verify_certs=False
+                )
+                logger.debug("Elasticsearch client initialized")
+            except Exception as e:
+                logger.error(f"Failed to initialize Elasticsearch client: {str(e)}")
+                self.client = None
+        
+        return self.client
     
     def is_configured(self):
         """Check if the service is properly configured."""
-        is_config = bool(self.agents_url and self.agents_token)
-        logger.debug(f"Vegas GPT Service configured: {is_config}")
+        is_config = bool(self.es_host and self.username and self.password)
+        logger.debug(f"ELK Service configured: {is_config}")
         return is_config
     
-    def analyze_logs(self, logs, app_code=None):
-        """Analyze logs using the Verizon Inspire API to identify errors."""
+    def test_connection(self):
+        """Test the connection to the ELK service."""
         if not self.is_configured():
-            logger.error("Vegas GPT Service is not configured properly")
-            return {"errors": [], "summary": "Error: Vegas GPT service not configured."}
+            return False, "ELK Service is not configured properly"
             
         try:
-            if not logs:
-                logger.warning("No logs provided for analysis")
-                return {
-                    "errors": [],
-                    "summary": "No logs available to analyze."
-                }
+            client = self.get_client()
+            if client is None:
+                return False, "Failed to initialize Elasticsearch client"
+                
+            # Test the connection with a simple info request
+            info = client.info()
             
-            # Format logs for analysis
-            log_text = self._format_logs_for_analysis(logs)
-            
-            # Include application context in the prompt if available
-            app_context = f"Application: {app_code}\n" if app_code else ""
-            
-            prompt = f"""
-            {app_context}Analyze the following system logs and identify any errors or issues:
-            
-            {log_text}
-            
-            Please provide:
-            1. From the log can you infer the possible reasons for the failure
-            2. Can you sumarise your finding and give me the root cause
-            3. If you find the possible database or server entity, please list that aswell
-            4. If you find the SQL error list that aswell
-
-            """
-            
-            logger.debug(f"Sending logs to Vegas GPT for analysis")
-            
-            # Prepare request based on the working example
-            data = {
-                "inference_type": "generate",
-                "user_id": "Synapt-Prod",
-                "agent_id": "SRE Prompt Playground Synapt",
-                "task_id": "Open Prompt SYNAPT",
-                "variables": {
-                    "{prompt}": prompt
-                },
-                "model": "VEGAS",
-                "model_settings": {
-                    "temperature": 0.3,  # Lower temperature for more predictable JSON output
-                    "max_output_tokens": 4000
-                }
-            }
-            
-            # Add trailing slash if not present
-            if not self.agents_url.endswith('/'):
-                inference_url = self.agents_url + "/inference/generate"
+            if info and 'version' in info:
+                es_version = info['version']['number']
+                cluster_name = info.get('cluster_name', 'unknown')
+                return True, f"Successfully connected to Elasticsearch {es_version} (cluster: {cluster_name})"
             else:
-                inference_url = self.agents_url + "inference/generate"
-                
-            headers = {
-                'X-api-key': self.agents_token,
-                'Content-Type': 'application/json'
-            }
-            
-            logger.debug(f"Calling Vegas GPT API at: {inference_url}")
-            
-            # Send request to API
-            try:
-                response = requests.post(
-                    inference_url, 
-                    json=data, 
-                    headers=headers, 
-                    timeout=120  # Increased timeout for log analysis
-                )
-                
-                logger.debug(f"Vegas GPT API response status: {response.status_code}")
-                
-                if response.status_code != 200:
-                    logger.error(f"Vegas GPT API error: {response.status_code} - {response.text}")
-                    return {
-                        "errors": [],
-                        "summary": f"Error from Vegas GPT service: {response.status_code}"
-                    }
-                
-                # Extract the AI response from the JSON response
-                response_data = response.json()
-                
-                if 'ai_response' not in response_data:
-                    logger.error(f"Unexpected response format from Vegas GPT: {response_data}")
-                    return {
-                        "errors": [],
-                        "summary": "Received unexpected response format from Vegas GPT"
-                    }
-                
-                ai_response = response_data['ai_response']
-                logger.debug(f"Raw Vegas GPT response: {ai_response[:500]}...")
-                
-                # Try to extract JSON from the response
-                analysis = self._extract_json_from_response(ai_response)
-                
-                if analysis:
-                    logger.info(f"Analysis complete. Found {len(analysis.get('errors', []))} errors.")
-                    return analysis
-                else:
-                    return {
-                        "errors": [],
-                        "summary": "Failed to parse structured data from Vegas GPT response",
-                        "raw_response": ai_response[:1000]  # First 1000 chars to avoid huge logs
-                    }
-                
-            except requests.RequestException as e:
-                logger.error(f"Request error calling Vegas GPT: {str(e)}")
-                return {
-                    "errors": [],
-                    "summary": f"Error calling Vegas GPT service: {str(e)}"
-                }
+                return False, "Connected but received unexpected response format"
                 
         except Exception as e:
-            logger.error(f"Error analyzing logs with Vegas GPT: {str(e)}")
+            logger.error(f"Error testing ELK service connection: {str(e)}")
             logger.error(traceback.format_exc())
-            return {
-                "errors": [],
-                "summary": f"Error during analysis: {str(e)}"
-            }
+            return False, f"Error connecting to ELK service: {str(e)}"
     
-    def _format_logs_for_analysis(self, logs):
-        """Format logs into a text string for analysis."""
-        log_text = ""
-        count = 0
-        max_logs = 500  # Limit the number of logs to prevent token overflow
-        
-        for log in logs[:max_logs]:
-            timestamp = log.get('timestamp', '')
-            level = log.get('level', 'INFO').upper()
-            message = log.get('message', '')
-            service = log.get('service', '')
+    def retrieve_logs(self, work_order, start_time, end_time, max_logs=1000):
+        """Retrieve logs from ELK based on the provided parameters."""
+        if not self.is_configured():
+            logger.error("ELK Service is not configured properly")
+            return None
             
-            log_entry = f"[{timestamp}] [{level}] [{service}] {message}\n"
-            log_text += log_entry
-            count += 1
-            
-        if count < len(logs):
-            log_text += f"\n... {len(logs) - count} more log entries not shown ...\n"
-            
-        return log_text
-    
-    def _extract_json_from_response(self, response_text):
-        """Extract JSON from the AI service response."""
         try:
-            # Method 1: Try to find JSON block between curly braces
-            json_start = response_text.find('{')
-            json_end = response_text.rfind('}') + 1
+            client = self.get_client()
+            if client is None:
+                logger.error("Failed to initialize Elasticsearch client")
+                return None
             
-            if json_start >= 0 and json_end > json_start:
-                try:
-                    json_str = response_text[json_start:json_end]
-                    return json.loads(json_str)
-                except json.JSONDecodeError:
-                    logger.debug("Failed to parse full JSON block, trying alternative methods...")
+            # Log input parameters
+            logger.debug(f"ELK query parameters: work_order={work_order}")
+            logger.debug(f"ELK query time range: start={start_time}, end={end_time}")
             
-            # Method 2: Try to find JSON block with code block markers
-            import re
-            json_blocks = re.findall(r'```(?:json)?\s*([\s\S]*?)\s*```', response_text)
-            
-            if json_blocks:
-                for block in json_blocks:
-                    try:
-                        # Clean up block and try to parse
-                        cleaned_block = block.strip()
-                        if cleaned_block.startswith('{') and cleaned_block.endswith('}'):
-                            return json.loads(cleaned_block)
-                    except:
-                        continue
-            
-            # Method 3: Try line by line to find possible JSON objects
-            lines = response_text.split('\n')
-            for i, line in enumerate(lines):
-                if '{' in line:
-                    # Found potential start of JSON
-                    for j in range(i, len(lines)):
-                        if '}' in lines[j]:
-                            # Found potential end of JSON
-                            json_candidate = '\n'.join(lines[i:j+1])
-                            # Extract text between { and }
-                            start = json_candidate.find('{')
-                            end = json_candidate.rfind('}') + 1
-                            if start >= 0 and end > start:
-                                try:
-                                    return json.loads(json_candidate[start:end])
-                                except:
-                                    continue
-            
-            # No valid JSON found, try to extract error information
-            logger.warning("Could not extract JSON from Vegas GPT response")
-            
-            # Create a minimal structure with any error information we can find
-            error_patterns = [
-                r'Error:.*',
-                r'Exception:.*',
-                r'.*exception.*',
-                r'.*failure.*',
-                r'.*failed.*',
-            ]
-            
-            errors = []
-            for pattern in error_patterns:
-                matches = re.findall(pattern, response_text, re.IGNORECASE)
-                for match in matches[:5]:  # Limit to first 5 matches
-                    errors.append({
-                        "message": match.strip(),
-                        "root_cause": "Unknown - extracted from unstructured response",
-                        "severity": "Unknown",
-                        "timestamp": ""
-                    })
-            
-            if errors:
-                return {
-                    "errors": errors,
-                    "summary": f"Extracted {len(errors)} potential errors from unstructured response"
-                }
-            
-            # Return empty structure if all else fails
-            return {
-                "errors": [],
-                "summary": "Could not extract structured data from Vegas GPT response"
+            # Build the search query based on your working example
+            query = {
+                "query": {
+                    "bool": {
+                        "should": [
+                            {
+                                "match_phrase": {
+                                    "message": work_order
+                                }
+                            }
+                        ],
+                        "filter": {
+                            "range": {
+                                "@timestamp": {
+                                    "gte": start_time,
+                                    "lte": end_time
+                                }
+                            }
+                        }
+                    }
+                },
+                "size": max_logs,
+                "sort": [
+                    {"@timestamp": {"order": "asc"}}
+                ]
             }
+            
+            # If task_name is provided, add it to the query
+            #if task_name:
+            #    query["query"]["bool"]["should"].append({
+            #        "match_phrase": {
+            #            "message": task_name
+            #        }
+            #    })
+            
+            # Log the query for debugging
+            import json
+            logger.debug(f"ELK query: {json.dumps(query, indent=2)}")
+            
+            # Perform the search
+            logger.info(f"Sending search request to Elasticsearch for work order {work_order}")
+            response = client.search(index=self.elk_index, body=query)
+            
+            # Process the response
+            hits = response.get('hits', {}).get('hits', [])
+            
+            if not hits:
+                logger.info(f"No logs found for work order {work_order}")
+                return []
+            
+            logger.info(f"Retrieved {len(hits)} logs from ELK")
+            
+            # Extract log messages
+            logs = []
+            for hit in hits:
+                source = hit.get('_source', {})
+                
+                # Create a standardized log entry
+                log_entry = {
+                    'timestamp': source.get('@timestamp', source.get('timestamp', '')),
+                    'level': source.get('level', source.get('log_level', 'INFO')),
+                    'message': source.get('message', ''),
+                    'service': source.get('service', source.get('service_name', '')),
+                    'transaction_id': source.get('transaction_id', '')
+                }
+                
+                # Add the log entry to our results
+                logs.append(log_entry)
+            
+            # Analyze logs to extract error messages (similar to your example code)
+            error_logs = []
+            for log in logs:
+                message = log.get('message', '')
+                if 'Exception' in message or 'Error' in message:
+                    error_logs.append(log)
+                    logger.debug(f"Found error in log: {message[:100]}...")
+            
+            logger.info(f"Found {len(error_logs)} logs containing errors")
+            
+            # Return all logs - the VegasGPT will analyze them
+            return logs
             
         except Exception as e:
-            logger.error(f"Error extracting JSON from response: {str(e)}")
+            logger.error(f"Error retrieving logs from ELK: {str(e)}")
             logger.error(traceback.format_exc())
             return None
-
-    def test_connection(self):
-        """Test the connection to the Vegas GPT service."""
-        if not self.is_configured():
-            return False, "Vegas GPT Service is not configured properly - missing API token or URL"
-            
-        try:
-            # Prepare request based on the working example
-            data = {
-                "inference_type": "generate",
-                 "user_id": "Synapt-Prod",
-                "agent_id": "SRE Prompt Playground Synapt",
-                "task_id": "Open Prompt SYNAPT",
-                "variables": {
-                    "{prompt}": "Return 'Connection successful' as a simple test."
-                },
-                "model": "VEGAS",
-                "model_settings": {
-                    "temperature": 0.1,
-                    "max_output_tokens": 20
-                }
-            }
-            
-            # Add trailing slash if not present
-            if not self.agents_url.endswith('/'):
-                inference_url = self.agents_url + "/inference/generate"
-            else:
-                inference_url = self.agents_url + "inference/generate"
-                
-            headers = {
-                'X-api-key': self.agents_token,
-                'Content-Type': 'application/json'
-            }
-            
-            logger.debug(f"Testing connection to: {inference_url}")
-            logger.debug(f"Token preview: {self.agents_token[:5]}...")
-            
-            response = requests.post(
-                inference_url, 
-                json=data, 
-                headers=headers, 
-                timeout=10
-            )
-            
-            if response.status_code == 200:
-                response_json = response.json()
-                if 'ai_response' in response_json:
-                    return True, "Successfully connected to Vegas GPT service"
-                else:
-                    return False, f"Connected but received unexpected response format: {response_json}"
-            else:
-                return False, f"Failed to connect: {response.status_code} - {response.text}"
-                
-        except Exception as e:
-            logger.error(f"Error testing Vegas GPT service connection: {str(e)}")
-            logger.error(traceback.format_exc())
-            return False, f"Error connecting to Vegas GPT service: {str(e)}"
+    
+    def reset_connection(self):
+        """Reset the Elasticsearch client connection."""
+        if self.client:
+            try:
+                self.client.close()
+            except:
+                pass
+            finally:
+                self.client = None
+        
+        logger.info("Elasticsearch client connection reset")
+        return True
