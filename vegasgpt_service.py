@@ -32,12 +32,10 @@ class VegasGPTService:
                     "summary": "No logs available to analyze."
                 }
             
-            # Convert logs to a readable format for the AI
             log_text = ""
             for log in logs:
                 log_text += f"[{log.get('timestamp')}] [{log.get('level')}] {log.get('message')}\n"
             
-            # Prepare the prompt for the AI
             prompt = f"""
             Analyze the following system logs and identify any errors or issues:
             
@@ -62,7 +60,6 @@ class VegasGPTService:
             }}
             """
             
-            # Prepare the request data
             data = {
                 "variables": {
                     "prompt": prompt
@@ -74,7 +71,6 @@ class VegasGPTService:
                 }
             }
             
-            # Prepare the inference URL and headers
             inference_url = f"{self.agents_url}/inference/generate"
             headers = {
                 'X-api-key': self.agents_token,
@@ -83,7 +79,6 @@ class VegasGPTService:
             
             logger.debug("Sending logs to Verizon Inspire AI for analysis")
             
-            # Make the API request
             response = requests.post(inference_url, json=data, headers=headers, timeout=60)
             
             if response.status_code != 200:
@@ -93,12 +88,9 @@ class VegasGPTService:
                     "summary": f"Error from AI service: {response.status_code}"
                 }
             
-            # Extract the AI response
             ai_response = response.json().get('ai_response', '')
             
-            # Try to extract JSON from the response
             try:
-                # Look for JSON in the response
                 json_start = ai_response.find('{')
                 json_end = ai_response.rfind('}') + 1
                 
@@ -106,19 +98,16 @@ class VegasGPTService:
                     json_str = ai_response[json_start:json_end]
                     analysis = json.loads(json_str)
                 else:
-                    # Fallback if no JSON is found
                     analysis = {
                         "errors": [],
                         "summary": "No structured analysis available."
                     }
             except json.JSONDecodeError:
-                # Handle case where response is not valid JSON
                 analysis = {
                     "errors": [],
                     "summary": "Could not parse the analysis response."
                 }
             
-            # Add raw response for debugging
             analysis["raw_response"] = ai_response
             
             logger.info(f"Analysis complete. Found {len(analysis.get('errors', []))} errors.")
@@ -138,7 +127,6 @@ class VegasGPTService:
             return False, "Vegas GPT Service is not configured properly - missing API token"
             
         try:
-            # Simple test prompt
             data = {
                 "variables": {
                     "prompt": "Return 'Connection successful' as a simple test."
@@ -150,18 +138,15 @@ class VegasGPTService:
                 }
             }
             
-            # Prepare the inference URL and headers
             inference_url = f"{self.agents_url}/inference/generate"
             headers = {
                 'X-api-key': self.agents_token,
                 'Content-Type': 'application/json'
             }
             
-            # Log request details
             logger.debug(f"Testing connection to: {inference_url}")
             logger.debug(f"Headers: X-api-key: {self.agents_token[:5]}...")
             
-            # Make the API request
             response = requests.post(
                 inference_url, 
                 json=data, 
@@ -169,9 +154,7 @@ class VegasGPTService:
                 timeout=10
             )
             
-            # Check response
             if response.status_code == 200:
-                # Try to parse the response to verify it's valid
                 response_json = response.json()
                 if 'ai_response' in response_json:
                     return True, "Successfully connected to Vegas GPT service"
