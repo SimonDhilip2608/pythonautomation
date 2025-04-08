@@ -5,3 +5,1332 @@ curl -X 'POST' \
   -d '{
   "OrderRequest": "7915265940"
 }'
+
+
+
+
+[
+  {
+    "domain": "ORDNG",
+    "order_number": "7915265940",
+    "order_type": "INSTALL",
+    "location_id": "150107",
+    "qos_ind": null,
+    "cnam_ind": null,
+    "as_id": null,
+    "location_name": null,
+    "flow": "Non-RIV",
+    "rootworkflowcaseid": "52933353",
+    "wfcaseid": "52936866",
+    "wf_task_name": "GetActivationTaskDetails",
+    "status": "Completed",
+    "batch_no": 1,
+    "resp_status_code": "CE200",
+    "resp_status_desc": "Success",
+    "tn_count": "[{\"code\": \"FINAL_TN_COUNT\", \"value\": \"1\"}]",
+    "start_index": 1,
+    "end_index": 500,
+    "transaction_start_time": "2023-08-10T16:45:00.631000",
+    "transaction_end_time": "2023-08-10T16:45:01.094000",
+    "response": {
+      "entityOrder": [
+        {
+          "orderStatus": null,
+          "entityAction": null,
+          "entityOrderId": null,
+          "parentOrderId": null,
+          "entityTypeName": "RES_TN",
+          "addRequiredTask": [],
+          "entityOrderSpec": null,
+          "addEntityOrderId": 200030860,
+          "workOrderVersion": null,
+          "changeRequiredTask": null,
+          "deleteRequiredTask": null,
+          "changeEntityOrderId": null,
+          "deleteEntityOrderId": null,
+          "preChangeRequiredtask": null,
+          "preChangeEntityOrderId": null,
+          "entityOrderTransactionSpec": null
+        }
+      ],
+      "orderHeader": {
+        "supp": false,
+        "isSupp": false,
+        "region": "US",
+        "dueDate": "2023-08-10",
+        "endIndex": 500,
+        "orderType": "INSTALL",
+        "startIndex": 1,
+        "batchNumber": 1,
+        "orderStatus": "WO_COMPLETE",
+        "r2rTnPresent": false,
+        "masterOrderId": 200017412,
+        "numberOfR2rTn": 0,
+        "transactionId": "connect-voip-provision:52936866:160730811",
+        "isR2rTnPresent": false,
+        "orderHeaderSpec": [
+          {
+            "specName": "PRODUCT_TYPE",
+            "workflow": null,
+            "specValue": "VOIP"
+          },
+          {
+            "specName": "VERSION",
+            "workflow": null,
+            "specValue": ""
+          },
+          {
+            "specName": "TIN",
+            "workflow": null,
+            "specValue": ""
+          },
+          {
+            "specName": "GROUP",
+            "workflow": null,
+            "specValue": ""
+          },
+          {
+            "specName": "PROJECT",
+            "workflow": null,
+            "specValue": ""
+          },
+          {
+            "specName": "LOCATION_ID",
+            "workflow": null,
+            "specValue": "150107"
+          },
+          {
+            "specName": "ENTERPRISE_ID",
+            "workflow": null,
+            "specValue": "800212091"
+          },
+          {
+            "specName": "LOC_ID",
+            "workflow": null,
+            "specValue": "150107"
+          },
+          {
+            "specName": "FLOW",
+            "workflow": null,
+            "specValue": "Non-RIV"
+          },
+          {
+            "specName": "FLOW",
+            "workflow": null,
+            "specValue": "Non-RIV"
+          },
+          {
+            "specName": "ORIGINATING_SYSTEM",
+            "workflow": null,
+            "specValue": "CANVAS_GUI"
+          },
+          {
+            "specName": "ORDER_CATEGORY",
+            "workflow": null,
+            "specValue": "HIPC"
+          },
+          {
+            "specName": "ORDER_CATEGORY",
+            "workflow": null,
+            "specValue": "HIPC"
+          },
+          {
+            "specName": "ORIGINATING_SYSTEM",
+            "workflow": null,
+            "specValue": "CANVAS_GUI"
+          },
+          {
+            "specName": "MINOR_ORDER_TYPE",
+            "workflow": null,
+            "specValue": null
+          },
+          {
+            "specName": "ORD_REMARKS",
+            "workflow": null,
+            "specValue": ""
+          },
+          {
+            "specName": "ORD_MGR_NAME",
+            "workflow": null,
+            "specValue": "RuchirBhardwaj"
+          },
+          {
+            "specName": "ORD_MGR_PHONE",
+            "workflow": null,
+            "specValue": ""
+          },
+          {
+            "specName": "ORD_MGR_EMAIL",
+            "workflow": null,
+            "specValue": "ruchir.bhardwaj@verizon.com"
+          },
+          {
+            "specName": "LAST_MODIFIED_DATE",
+            "workflow": null,
+            "specValue": "2023-08-10 16:34:10.601"
+          },
+          {
+            "specName": "CENTREX_TYPE",
+            "workflow": null,
+            "specValue": "ENHANCED_IP_CENTREX"
+          },
+          {
+            "specName": "JURISDICTION",
+            "workflow": null,
+            "specValue": "ENHANCED_IP_CENTREX"
+          },
+          {
+            "specName": "PROJECT_ID",
+            "workflow": null,
+            "specValue": "R"
+          },
+          {
+            "specName": "EXPEDITE",
+            "workflow": null,
+            "specValue": "N"
+          },
+          {
+            "specName": "MODIFIED_BY",
+            "workflow": null,
+            "specValue": "ordng_app_writer"
+          },
+          {
+            "specName": "CREATED_BY",
+            "workflow": null,
+            "specValue": "CONNECT"
+          },
+          {
+            "specName": "CREATION_DATE",
+            "workflow": null,
+            "specValue": "2023-08-10 16:34:12.981"
+          },
+          {
+            "specName": "LAST_MODIFIED_DATE",
+            "workflow": null,
+            "specValue": "2023-08-10 16:39:55.167049"
+          }
+        ],
+        "workOrderNumber": "7915265940",
+        "workOrderVersion": "0",
+        "workflowTaskName": "GetActivationTaskDetails"
+      },
+      "responseDetails": {
+        "statusCode": "CE200",
+        "statusDescription": "Success"
+      },
+      "domainAckresponse": null
+    },
+    "failure_details": [
+      {
+        "orderStatus": null,
+        "entityAction": null,
+        "entityOrderId": null,
+        "parentOrderId": null,
+        "entityTypeName": "RES_TN",
+        "addRequiredTask": [],
+        "entityOrderSpec": null,
+        "addEntityOrderId": 200030860,
+        "workOrderVersion": null,
+        "changeRequiredTask": null,
+        "deleteRequiredTask": null,
+        "changeEntityOrderId": null,
+        "deleteEntityOrderId": null,
+        "preChangeRequiredtask": null,
+        "preChangeEntityOrderId": null,
+        "entityOrderTransactionSpec": null
+      }
+    ]
+  },
+  {
+    "domain": "ORDNG",
+    "order_number": "7915265940",
+    "order_type": "INSTALL",
+    "location_id": "150107",
+    "qos_ind": null,
+    "cnam_ind": null,
+    "as_id": null,
+    "location_name": null,
+    "flow": "Non-RIV",
+    "rootworkflowcaseid": "52933353",
+    "wfcaseid": "52936162",
+    "wf_task_name": "ValidateETLStatus",
+    "status": "Completed",
+    "batch_no": 1,
+    "resp_status_code": "CE200",
+    "resp_status_desc": "Success",
+    "tn_count": "[{\"code\": \"FINAL_TN_COUNT\", \"value\": \"1\"}]",
+    "start_index": 1,
+    "end_index": 500,
+    "transaction_start_time": "2023-08-10T16:44:58.229000",
+    "transaction_end_time": "2023-08-10T16:44:59.346000",
+    "response": {
+      "entityOrder": null,
+      "orderHeader": {
+        "clli": "ORDERTRANSLATION",
+        "flow": "Non-RIV",
+        "supp": false,
+        "bodId": "",
+        "isSupp": false,
+        "region": "US",
+        "dueDate": "",
+        "product": "VOIP",
+        "endIndex": 500,
+        "orderType": "INSTALL",
+        "startIndex": 1,
+        "batchNumber": 1,
+        "dueDateType": "",
+        "serviceType": "HIPC",
+        "enterpriseId": "800212091",
+        "functionCode": "RELEASE",
+        "r2rTnPresent": false,
+        "numberOfR2rTn": 0,
+        "sourceAddress": "https://rest-incoming-interface-e0sv-prod-pam-services-namespace.apps-prod.vpc.verizon.com",
+        "specification": [
+          {
+            "code": "FINAL_TN_COUNT",
+            "value": "1"
+          }
+        ],
+        "transactionId": "connect-voip-provision:52936162:160727900",
+        "isR2rTnPresent": false,
+        "lineOfBusiness": "RETAIL_VOIP",
+        "workflowCaseId": "52933353",
+        "workOrderNumber": "7915265940",
+        "workOrderVersion": "0",
+        "workflowTaskName": "ValidateETLStatus",
+        "originatingSystem": "CANVAS_GUI",
+        "rootWorkflowCaseId": "52933353",
+        "serviceOrderNumber": ""
+      },
+      "responseDetails": {
+        "statusCode": "CE200",
+        "statusDescription": "Success"
+      },
+      "domainAckresponse": null
+    },
+    "failure_details": null
+  },
+  {
+    "domain": "ACTIVN",
+    "order_number": "7915265940",
+    "order_type": "INSTALL",
+    "location_id": "150107",
+    "qos_ind": null,
+    "cnam_ind": null,
+    "as_id": null,
+    "location_name": null,
+    "flow": "Non-RIV",
+    "rootworkflowcaseid": "52933353",
+    "wfcaseid": "52935689",
+    "wf_task_name": "Add-VOIP-TN-To-BSNS",
+    "status": "Completed",
+    "batch_no": 1,
+    "resp_status_code": "CE200",
+    "resp_status_desc": "Success",
+    "tn_count": "[{\"code\": \"FINAL_TN_COUNT\", \"value\": \"1\"}]",
+    "start_index": 1,
+    "end_index": 1,
+    "transaction_start_time": "2023-08-10T16:39:45.692000",
+    "transaction_end_time": "2023-08-10T16:39:52.032000",
+    "response": {
+      "entityOrder": null,
+      "orderHeader": {
+        "clli": "VZBELBBSNS1",
+        "flow": "Non-RIV",
+        "supp": false,
+        "bodId": "",
+        "isSupp": false,
+        "region": "US",
+        "dueDate": "",
+        "product": "VOIP",
+        "endIndex": 1,
+        "orderType": "INSTALL",
+        "entityType": "RES_TN",
+        "startIndex": 1,
+        "batchNumber": 1,
+        "dueDateType": "",
+        "responseUrl": "https://rest-incoming-interface-e0sv-prod-pam-services-namespace.apps-prod.vpc.verizon.com/rest/api/workflow/completeAsyncTaskInBA",
+        "serviceType": "HIPC",
+        "enterpriseId": "800212091",
+        "functionCode": "RELEASE",
+        "r2rTnPresent": false,
+        "activeProfile": "prod-tpa-k8s",
+        "entityOrderId": "200030860",
+        "numberOfR2rTn": 0,
+        "sourceAddress": "https://rest-incoming-interface-e0sv-prod-pam-services-namespace.apps-prod.vpc.verizon.com",
+        "specification": [
+          {
+            "code": "FINAL_TN_COUNT",
+            "value": "1"
+          }
+        ],
+        "transactionId": "connect-voip-provision:52935689:160725923",
+        "isR2rTnPresent": false,
+        "lineOfBusiness": "RETAIL_VOIP",
+        "workflowCaseId": "52935330",
+        "workOrderNumber": "7915265940",
+        "workOrderVersion": "0",
+        "workflowTaskName": "Add-VOIP-TN-To-BSNS",
+        "originatingSystem": "CANVAS_GUI",
+        "rootWorkflowCaseId": "52933353",
+        "serviceOrderNumber": ""
+      },
+      "responseDetails": {
+        "statusCode": "CE200",
+        "statusDescription": "Success"
+      },
+      "domainAckresponse": null
+    },
+    "failure_details": null
+  },
+  {
+    "domain": "ACTIVN",
+    "order_number": "7915265940",
+    "order_type": "INSTALL",
+    "location_id": "150107",
+    "qos_ind": null,
+    "cnam_ind": null,
+    "as_id": null,
+    "location_name": null,
+    "flow": "Non-RIV",
+    "rootworkflowcaseid": "52933353",
+    "wfcaseid": "52935374",
+    "wf_task_name": "Add-VOIP-TN-To-NSRS",
+    "status": "Completed",
+    "batch_no": 1,
+    "resp_status_code": "CE200",
+    "resp_status_desc": "Success",
+    "tn_count": "[{\"code\": \"FINAL_TN_COUNT\", \"value\": \"1\"}]",
+    "start_index": 1,
+    "end_index": 1,
+    "transaction_start_time": "2023-08-10T16:39:35.629000",
+    "transaction_end_time": "2023-08-10T16:39:36.027000",
+    "response": {
+      "entityOrder": null,
+      "orderHeader": {
+        "clli": "CONNECTNSRS01",
+        "flow": "Non-RIV",
+        "supp": false,
+        "bodId": "",
+        "isSupp": false,
+        "region": "US",
+        "dueDate": "",
+        "product": "VOIP",
+        "endIndex": 1,
+        "orderType": "INSTALL",
+        "entityType": "RES_TN",
+        "startIndex": 1,
+        "batchNumber": 1,
+        "dueDateType": "",
+        "responseUrl": "https://rest-incoming-interface-e0sv-prod-pam-services-namespace.apps-prod.vpc.verizon.com/rest/api/workflow/completeAsyncTaskInBA",
+        "serviceType": "HIPC",
+        "enterpriseId": "800212091",
+        "functionCode": "RELEASE",
+        "r2rTnPresent": false,
+        "activeProfile": "prod-tpa-k8s",
+        "entityOrderId": "200030860",
+        "numberOfR2rTn": 0,
+        "sourceAddress": "https://rest-incoming-interface-e0sv-prod-pam-services-namespace.apps-prod.vpc.verizon.com",
+        "specification": [
+          {
+            "code": "FINAL_TN_COUNT",
+            "value": "1"
+          }
+        ],
+        "transactionId": "connect-voip-provision:52935374:160724719",
+        "isR2rTnPresent": false,
+        "lineOfBusiness": "RETAIL_VOIP",
+        "workflowCaseId": "52935330",
+        "workOrderNumber": "7915265940",
+        "workOrderVersion": "0",
+        "workflowTaskName": "Add-VOIP-TN-To-NSRS",
+        "originatingSystem": "CANVAS_GUI",
+        "rootWorkflowCaseId": "52933353",
+        "serviceOrderNumber": ""
+      },
+      "responseDetails": {
+        "statusCode": "CE200",
+        "statusDescription": "Success"
+      },
+      "domainAckresponse": null
+    },
+    "failure_details": null
+  },
+  {
+    "domain": "ACTIVN",
+    "order_number": "7915265940",
+    "order_type": "INSTALL",
+    "location_id": "150107",
+    "qos_ind": null,
+    "cnam_ind": null,
+    "as_id": null,
+    "location_name": null,
+    "flow": "Non-RIV",
+    "rootworkflowcaseid": "52933353",
+    "wfcaseid": "52935333",
+    "wf_task_name": "Add-VOIP-TN-To-Broadsoft",
+    "status": "Completed",
+    "batch_no": 1,
+    "resp_status_code": "CE200",
+    "resp_status_desc": "Success",
+    "tn_count": "[{\"code\": \"FINAL_TN_COUNT\", \"value\": \"1\"}]",
+    "start_index": 1,
+    "end_index": 1,
+    "transaction_start_time": "2023-08-10T16:36:35.019000",
+    "transaction_end_time": "2023-08-10T16:36:39.069000",
+    "response": {
+      "entityOrder": null,
+      "orderHeader": {
+        "clli": "VZBBASRIJ10",
+        "flow": "Non-RIV",
+        "supp": false,
+        "bodId": "",
+        "isSupp": false,
+        "region": "US",
+        "dueDate": "",
+        "product": "VOIP",
+        "endIndex": 1,
+        "orderType": "INSTALL",
+        "entityType": "RES_TN",
+        "startIndex": 1,
+        "batchNumber": 1,
+        "dueDateType": "",
+        "responseUrl": "https://rest-incoming-interface-e0sv-prod-pam-services-namespace.apps-prod.vpc.verizon.com/rest/api/workflow/completeAsyncTaskInBA",
+        "serviceType": "HIPC",
+        "enterpriseId": "800212091",
+        "functionCode": "RELEASE",
+        "r2rTnPresent": false,
+        "activeProfile": "prod-tpa-k8s",
+        "entityOrderId": "200030860",
+        "numberOfR2rTn": 0,
+        "sourceAddress": "https://rest-incoming-interface-e0sv-prod-pam-services-namespace.apps-prod.vpc.verizon.com",
+        "specification": [
+          {
+            "code": "FINAL_TN_COUNT",
+            "value": "1"
+          }
+        ],
+        "transactionId": "connect-voip-provision:52935333:160724584",
+        "isR2rTnPresent": false,
+        "lineOfBusiness": "RETAIL_VOIP",
+        "workflowCaseId": "52935330",
+        "workOrderNumber": "7915265940",
+        "workOrderVersion": "0",
+        "workflowTaskName": "Add-VOIP-TN-To-Broadsoft",
+        "originatingSystem": "CANVAS_GUI",
+        "rootWorkflowCaseId": "52933353",
+        "serviceOrderNumber": ""
+      },
+      "responseDetails": {
+        "statusCode": "CE200",
+        "statusDescription": "Success"
+      },
+      "domainAckresponse": null
+    },
+    "failure_details": null
+  },
+  {
+    "domain": "TNINV",
+    "order_number": "7915265940",
+    "order_type": "INSTALL",
+    "location_id": "150107",
+    "qos_ind": null,
+    "cnam_ind": null,
+    "as_id": null,
+    "location_name": null,
+    "flow": "Non-RIV",
+    "rootworkflowcaseid": "52933353",
+    "wfcaseid": "52935332",
+    "wf_task_name": "Add-VOIP-TN-To-Inventory",
+    "status": "Completed",
+    "batch_no": 1,
+    "resp_status_code": "CE200",
+    "resp_status_desc": "Success",
+    "tn_count": "[{\"code\": \"FINAL_TN_COUNT\", \"value\": \"1\"}]",
+    "start_index": 1,
+    "end_index": 1,
+    "transaction_start_time": "2023-08-10T16:34:20.941000",
+    "transaction_end_time": "2023-08-10T16:34:24.536000",
+    "response": {
+      "entityOrder": null,
+      "orderHeader": {
+        "flow": "Non-RIV",
+        "supp": false,
+        "isSupp": false,
+        "region": "US",
+        "dueDate": "",
+        "product": "VOIP",
+        "endIndex": 1,
+        "orderType": "INSTALL",
+        "entityType": "RES_TN",
+        "startIndex": 1,
+        "batchNumber": 1,
+        "dueDateType": "",
+        "serviceType": "HIPC",
+        "functionCode": "RELEASE",
+        "r2rTnPresent": false,
+        "entityOrderId": "200030860",
+        "numberOfR2rTn": 0,
+        "transactionId": "connect-voip-provision:52935332:160724586",
+        "isR2rTnPresent": false,
+        "lineOfBusiness": "RETAIL_VOIP",
+        "workflowCaseId": "52935330",
+        "workOrderNumber": "7915265940",
+        "workOrderVersion": "0",
+        "workflowTaskName": "Add-VOIP-TN-To-Inventory",
+        "originatingSystem": "CANVAS_GUI",
+        "serviceOrderNumber": ""
+      },
+      "responseDetails": {
+        "statusCode": "CE200",
+        "statusDescription": "Success"
+      },
+      "domainAckresponse": null
+    },
+    "failure_details": null
+  },
+  {
+    "domain": "ORDNG",
+    "order_number": "7915265940",
+    "order_type": "INSTALL",
+    "location_id": "150107",
+    "qos_ind": null,
+    "cnam_ind": null,
+    "as_id": null,
+    "location_name": null,
+    "flow": "Non-RIV",
+    "rootworkflowcaseid": "52933353",
+    "wfcaseid": "52935301",
+    "wf_task_name": "ValidateOrder",
+    "status": "Completed",
+    "batch_no": 1,
+    "resp_status_code": "CE200",
+    "resp_status_desc": "Success",
+    "tn_count": "[{\"code\": \"FINAL_TN_COUNT\", \"value\": \"1\"}]",
+    "start_index": 1,
+    "end_index": 500,
+    "transaction_start_time": "2023-08-10T16:34:17.720000",
+    "transaction_end_time": "2023-08-10T16:34:18.184000",
+    "response": {
+      "entityOrder": [
+        {
+          "orderStatus": null,
+          "entityAction": null,
+          "entityOrderId": null,
+          "parentOrderId": null,
+          "entityTypeName": "RES_TN",
+          "addRequiredTask": null,
+          "entityOrderSpec": null,
+          "addEntityOrderId": null,
+          "workOrderVersion": null,
+          "changeRequiredTask": null,
+          "deleteRequiredTask": null,
+          "changeEntityOrderId": null,
+          "deleteEntityOrderId": null,
+          "preChangeRequiredtask": null,
+          "preChangeEntityOrderId": null,
+          "entityOrderTransactionSpec": null
+        }
+      ],
+      "orderHeader": {
+        "clli": "ORNGVALIDATION",
+        "flow": "Non-RIV",
+        "supp": false,
+        "bodId": "",
+        "isSupp": false,
+        "region": "US",
+        "dueDate": "",
+        "product": "VOIP",
+        "endIndex": 500,
+        "orderType": "INSTALL",
+        "startIndex": 1,
+        "batchNumber": 1,
+        "dueDateType": "",
+        "serviceType": "HIPC",
+        "enterpriseId": "800212091",
+        "functionCode": "RELEASE",
+        "r2rTnPresent": false,
+        "numberOfR2rTn": 0,
+        "sourceAddress": "https://rest-incoming-interface-e0sv-prod-pam-services-namespace.apps-prod.vpc.verizon.com",
+        "specification": [
+          {
+            "code": "FINAL_TN_COUNT",
+            "value": "1"
+          }
+        ],
+        "transactionId": "connect-voip-provision:52935301:160724463",
+        "isR2rTnPresent": false,
+        "lineOfBusiness": "RETAIL_VOIP",
+        "workflowCaseId": "52935300",
+        "workOrderNumber": "7915265940",
+        "workOrderVersion": "0",
+        "workflowTaskName": "ValidateOrder",
+        "originatingSystem": "CANVAS_GUI",
+        "rootWorkflowCaseId": "52933353",
+        "serviceOrderNumber": ""
+      },
+      "responseDetails": {
+        "statusCode": "CE200",
+        "statusDescription": "Success"
+      },
+      "domainAckresponse": null
+    },
+    "failure_details": [
+      {
+        "orderStatus": null,
+        "entityAction": null,
+        "entityOrderId": null,
+        "parentOrderId": null,
+        "entityTypeName": "RES_TN",
+        "addRequiredTask": null,
+        "entityOrderSpec": null,
+        "addEntityOrderId": null,
+        "workOrderVersion": null,
+        "changeRequiredTask": null,
+        "deleteRequiredTask": null,
+        "changeEntityOrderId": null,
+        "deleteEntityOrderId": null,
+        "preChangeRequiredtask": null,
+        "preChangeEntityOrderId": null,
+        "entityOrderTransactionSpec": null
+      }
+    ]
+  },
+  {
+    "domain": "ORDNG",
+    "order_number": "7915265940",
+    "order_type": "INSTALL",
+    "location_id": "150107",
+    "qos_ind": null,
+    "cnam_ind": null,
+    "as_id": null,
+    "location_name": null,
+    "flow": "Non-RIV",
+    "rootworkflowcaseid": "52933353",
+    "wfcaseid": "52935277",
+    "wf_task_name": "GetWorkOrderDetails",
+    "status": "Completed",
+    "batch_no": 1,
+    "resp_status_code": "CE200",
+    "resp_status_desc": "Success",
+    "tn_count": "[{\"code\": \"FINAL_TN_COUNT\", \"value\": \"1\"}]",
+    "start_index": 1,
+    "end_index": 500,
+    "transaction_start_time": "2023-08-10T16:34:15.606000",
+    "transaction_end_time": "2023-08-10T16:34:15.937000",
+    "response": {
+      "entityOrder": [
+        {
+          "orderStatus": null,
+          "entityAction": null,
+          "entityOrderId": null,
+          "parentOrderId": null,
+          "entityTypeName": "RES_TN",
+          "addRequiredTask": [
+            {
+              "specName": "Add-VOIP-TN-To-NSRS",
+              "workflow": "",
+              "specValue": "YES"
+            },
+            {
+              "specName": "Add-VOIP-TN-To-Inventory",
+              "workflow": "",
+              "specValue": "YES"
+            },
+            {
+              "specName": "Add-VOIP-TN-To-Broadsoft",
+              "workflow": "",
+              "specValue": "YES"
+            },
+            {
+              "specName": "Add-VOIP-TN-To-BSNS",
+              "workflow": "",
+              "specValue": "YES"
+            }
+          ],
+          "entityOrderSpec": null,
+          "addEntityOrderId": 200030860,
+          "workOrderVersion": null,
+          "changeRequiredTask": null,
+          "deleteRequiredTask": null,
+          "changeEntityOrderId": null,
+          "deleteEntityOrderId": null,
+          "preChangeRequiredtask": null,
+          "preChangeEntityOrderId": null,
+          "entityOrderTransactionSpec": null
+        },
+        {
+          "orderStatus": null,
+          "entityAction": null,
+          "entityOrderId": null,
+          "parentOrderId": null,
+          "entityTypeName": "COMMON_ENTITY",
+          "addRequiredTask": [
+            {
+              "specName": "ValidateETLStatus",
+              "workflow": null,
+              "specValue": "YES"
+            },
+            {
+              "specName": "ValidateOrder",
+              "workflow": null,
+              "specValue": "YES"
+            }
+          ],
+          "entityOrderSpec": null,
+          "addEntityOrderId": null,
+          "workOrderVersion": null,
+          "changeRequiredTask": null,
+          "deleteRequiredTask": null,
+          "changeEntityOrderId": null,
+          "deleteEntityOrderId": null,
+          "preChangeRequiredtask": null,
+          "preChangeEntityOrderId": null,
+          "entityOrderTransactionSpec": null
+        }
+      ],
+      "orderHeader": {
+        "supp": false,
+        "isSupp": false,
+        "region": "US",
+        "dueDate": "2023-08-10",
+        "endIndex": 500,
+        "orderType": "INSTALL",
+        "startIndex": 1,
+        "batchNumber": 1,
+        "orderStatus": "WO_IN_PROGRESS",
+        "r2rTnPresent": false,
+        "masterOrderId": 200017412,
+        "numberOfR2rTn": 0,
+        "transactionId": "connect-voip-provision:52935277:160724389",
+        "isR2rTnPresent": false,
+        "orderHeaderSpec": [
+          {
+            "specName": "PRODUCT_TYPE",
+            "workflow": null,
+            "specValue": "VOIP"
+          },
+          {
+            "specName": "VERSION",
+            "workflow": null,
+            "specValue": ""
+          },
+          {
+            "specName": "TIN",
+            "workflow": null,
+            "specValue": ""
+          },
+          {
+            "specName": "GROUP",
+            "workflow": null,
+            "specValue": ""
+          },
+          {
+            "specName": "PROJECT",
+            "workflow": null,
+            "specValue": ""
+          },
+          {
+            "specName": "LOCATION_ID",
+            "workflow": null,
+            "specValue": "150107"
+          },
+          {
+            "specName": "ENTERPRISE_ID",
+            "workflow": null,
+            "specValue": "800212091"
+          },
+          {
+            "specName": "LOC_ID",
+            "workflow": null,
+            "specValue": "150107"
+          },
+          {
+            "specName": "FLOW",
+            "workflow": null,
+            "specValue": "Non-RIV"
+          },
+          {
+            "specName": "FLOW",
+            "workflow": null,
+            "specValue": "Non-RIV"
+          },
+          {
+            "specName": "ORIGINATING_SYSTEM",
+            "workflow": null,
+            "specValue": "CANVAS_GUI"
+          },
+          {
+            "specName": "ORDER_CATEGORY",
+            "workflow": null,
+            "specValue": "HIPC"
+          },
+          {
+            "specName": "ORDER_CATEGORY",
+            "workflow": null,
+            "specValue": "HIPC"
+          },
+          {
+            "specName": "ORIGINATING_SYSTEM",
+            "workflow": null,
+            "specValue": "CANVAS_GUI"
+          },
+          {
+            "specName": "MINOR_ORDER_TYPE",
+            "workflow": null,
+            "specValue": null
+          },
+          {
+            "specName": "ORD_REMARKS",
+            "workflow": null,
+            "specValue": ""
+          },
+          {
+            "specName": "ORD_MGR_NAME",
+            "workflow": null,
+            "specValue": "RuchirBhardwaj"
+          },
+          {
+            "specName": "ORD_MGR_PHONE",
+            "workflow": null,
+            "specValue": ""
+          },
+          {
+            "specName": "ORD_MGR_EMAIL",
+            "workflow": null,
+            "specValue": "ruchir.bhardwaj@verizon.com"
+          },
+          {
+            "specName": "LAST_MODIFIED_DATE",
+            "workflow": null,
+            "specValue": "2023-08-10 16:34:10.601"
+          },
+          {
+            "specName": "CENTREX_TYPE",
+            "workflow": null,
+            "specValue": "ENHANCED_IP_CENTREX"
+          },
+          {
+            "specName": "JURISDICTION",
+            "workflow": null,
+            "specValue": "ENHANCED_IP_CENTREX"
+          },
+          {
+            "specName": "PROJECT_ID",
+            "workflow": null,
+            "specValue": "R"
+          },
+          {
+            "specName": "EXPEDITE",
+            "workflow": null,
+            "specValue": "N"
+          },
+          {
+            "specName": "MODIFIED_BY",
+            "workflow": null,
+            "specValue": "ordng_app_writer"
+          },
+          {
+            "specName": "CREATED_BY",
+            "workflow": null,
+            "specValue": "CONNECT"
+          },
+          {
+            "specName": "CREATION_DATE",
+            "workflow": null,
+            "specValue": "2023-08-10 16:34:12.981"
+          },
+          {
+            "specName": "LAST_MODIFIED_DATE",
+            "workflow": null,
+            "specValue": "2023-08-10 16:34:13.444394"
+          }
+        ],
+        "workOrderNumber": "7915265940",
+        "workOrderVersion": "0",
+        "workflowTaskName": "GetWorkOrderDetails"
+      },
+      "responseDetails": {
+        "statusCode": "CE200",
+        "statusDescription": "Success"
+      },
+      "domainAckresponse": null
+    },
+    "failure_details": [
+      {
+        "orderStatus": null,
+        "entityAction": null,
+        "entityOrderId": null,
+        "parentOrderId": null,
+        "entityTypeName": "RES_TN",
+        "addRequiredTask": [
+          {
+            "specName": "Add-VOIP-TN-To-NSRS",
+            "workflow": "",
+            "specValue": "YES"
+          },
+          {
+            "specName": "Add-VOIP-TN-To-Inventory",
+            "workflow": "",
+            "specValue": "YES"
+          },
+          {
+            "specName": "Add-VOIP-TN-To-Broadsoft",
+            "workflow": "",
+            "specValue": "YES"
+          },
+          {
+            "specName": "Add-VOIP-TN-To-BSNS",
+            "workflow": "",
+            "specValue": "YES"
+          }
+        ],
+        "entityOrderSpec": null,
+        "addEntityOrderId": 200030860,
+        "workOrderVersion": null,
+        "changeRequiredTask": null,
+        "deleteRequiredTask": null,
+        "changeEntityOrderId": null,
+        "deleteEntityOrderId": null,
+        "preChangeRequiredtask": null,
+        "preChangeEntityOrderId": null,
+        "entityOrderTransactionSpec": null
+      },
+      {
+        "orderStatus": null,
+        "entityAction": null,
+        "entityOrderId": null,
+        "parentOrderId": null,
+        "entityTypeName": "COMMON_ENTITY",
+        "addRequiredTask": [
+          {
+            "specName": "ValidateETLStatus",
+            "workflow": null,
+            "specValue": "YES"
+          },
+          {
+            "specName": "ValidateOrder",
+            "workflow": null,
+            "specValue": "YES"
+          }
+        ],
+        "entityOrderSpec": null,
+        "addEntityOrderId": null,
+        "workOrderVersion": null,
+        "changeRequiredTask": null,
+        "deleteRequiredTask": null,
+        "changeEntityOrderId": null,
+        "deleteEntityOrderId": null,
+        "preChangeRequiredtask": null,
+        "preChangeEntityOrderId": null,
+        "entityOrderTransactionSpec": null
+      }
+    ]
+  },
+  {
+    "domain": "ORDNG",
+    "order_number": "7915265940",
+    "order_type": "INSTALL",
+    "location_id": "150107",
+    "qos_ind": null,
+    "cnam_ind": null,
+    "as_id": null,
+    "location_name": null,
+    "flow": "Non-RIV",
+    "rootworkflowcaseid": "52933353",
+    "wfcaseid": "52935203",
+    "wf_task_name": "TranslateOrder",
+    "status": "Completed",
+    "batch_no": 1,
+    "resp_status_code": "CE200",
+    "resp_status_desc": "Success",
+    "tn_count": "[{\"code\": \"FINAL_TN_COUNT\", \"value\": \"1\"}]",
+    "start_index": 1,
+    "end_index": 1,
+    "transaction_start_time": "2023-08-10T16:34:04",
+    "transaction_end_time": "2023-08-10T16:34:13.371000",
+    "response": {
+      "entityOrder": [
+        {
+          "orderStatus": "WO_INIT",
+          "entityAction": "ADD",
+          "entityOrderId": 200030860,
+          "parentOrderId": null,
+          "entityTypeName": "RES_TN",
+          "addRequiredTask": null,
+          "entityOrderSpec": [
+            {
+              "specName": "PROCESSING_TYPE",
+              "workflow": null,
+              "specValue": "TRANSLATED"
+            }
+          ],
+          "addEntityOrderId": null,
+          "workOrderVersion": null,
+          "changeRequiredTask": null,
+          "deleteRequiredTask": null,
+          "changeEntityOrderId": null,
+          "deleteEntityOrderId": null,
+          "preChangeRequiredtask": null,
+          "preChangeEntityOrderId": null,
+          "entityOrderTransactionSpec": null
+        }
+      ],
+      "orderHeader": {
+        "flow": "Non-RIV",
+        "supp": false,
+        "isSupp": false,
+        "region": "US",
+        "dueDate": "2023-08-10",
+        "endIndex": 1,
+        "orderType": "INSTALL",
+        "startIndex": 1,
+        "batchNumber": 1,
+        "orderStatus": "WO_INIT",
+        "r2rTnPresent": false,
+        "masterOrderId": 200017412,
+        "numberOfR2rTn": 0,
+        "specification": [
+          {
+            "code": "FINAL_TN_COUNT",
+            "value": "1"
+          }
+        ],
+        "transactionId": "connect-voip-provision:52935203:160724114",
+        "isR2rTnPresent": false,
+        "orderHeaderSpec": [
+          {
+            "specName": "PRODUCT_TYPE",
+            "workflow": null,
+            "specValue": "VOIP"
+          },
+          {
+            "specName": "VERSION",
+            "workflow": null,
+            "specValue": ""
+          },
+          {
+            "specName": "TIN",
+            "workflow": null,
+            "specValue": ""
+          },
+          {
+            "specName": "GROUP",
+            "workflow": null,
+            "specValue": ""
+          },
+          {
+            "specName": "PROJECT",
+            "workflow": null,
+            "specValue": ""
+          },
+          {
+            "specName": "LOCATION_ID",
+            "workflow": null,
+            "specValue": "150107"
+          },
+          {
+            "specName": "ENTERPRISE_ID",
+            "workflow": null,
+            "specValue": "800212091"
+          },
+          {
+            "specName": "LOC_ID",
+            "workflow": null,
+            "specValue": "150107"
+          },
+          {
+            "specName": "FLOW",
+            "workflow": null,
+            "specValue": "Non-RIV"
+          },
+          {
+            "specName": "FLOW",
+            "workflow": null,
+            "specValue": "Non-RIV"
+          },
+          {
+            "specName": "ORIGINATING_SYSTEM",
+            "workflow": null,
+            "specValue": "CANVAS_GUI"
+          },
+          {
+            "specName": "ORDER_CATEGORY",
+            "workflow": null,
+            "specValue": "HIPC"
+          },
+          {
+            "specName": "ORDER_CATEGORY",
+            "workflow": null,
+            "specValue": "HIPC"
+          },
+          {
+            "specName": "ORIGINATING_SYSTEM",
+            "workflow": null,
+            "specValue": "CANVAS_GUI"
+          },
+          {
+            "specName": "MINOR_ORDER_TYPE",
+            "workflow": null,
+            "specValue": null
+          },
+          {
+            "specName": "ORD_REMARKS",
+            "workflow": null,
+            "specValue": ""
+          },
+          {
+            "specName": "ORD_MGR_NAME",
+            "workflow": null,
+            "specValue": "RuchirBhardwaj"
+          },
+          {
+            "specName": "ORD_MGR_PHONE",
+            "workflow": null,
+            "specValue": ""
+          },
+          {
+            "specName": "ORD_MGR_EMAIL",
+            "workflow": null,
+            "specValue": "ruchir.bhardwaj@verizon.com"
+          },
+          {
+            "specName": "LAST_MODIFIED_DATE",
+            "workflow": null,
+            "specValue": "2023-08-10 16:34:10.601"
+          },
+          {
+            "specName": "CENTREX_TYPE",
+            "workflow": null,
+            "specValue": "ENHANCED_IP_CENTREX"
+          },
+          {
+            "specName": "JURISDICTION",
+            "workflow": null,
+            "specValue": "ENHANCED_IP_CENTREX"
+          },
+          {
+            "specName": "PROJECT_ID",
+            "workflow": null,
+            "specValue": "R"
+          },
+          {
+            "specName": "EXPEDITE",
+            "workflow": null,
+            "specValue": "N"
+          }
+        ],
+        "workOrderNumber": "7915265940",
+        "workOrderVersion": "0",
+        "workflowTaskName": "TranslateOrder"
+      },
+      "responseDetails": {
+        "statusCode": "CE200",
+        "statusDescription": "Success"
+      },
+      "domainAckresponse": null
+    },
+    "failure_details": [
+      {
+        "orderStatus": "WO_INIT",
+        "entityAction": "ADD",
+        "entityOrderId": 200030860,
+        "parentOrderId": null,
+        "entityTypeName": "RES_TN",
+        "addRequiredTask": null,
+        "entityOrderSpec": [
+          {
+            "specName": "PROCESSING_TYPE",
+            "workflow": null,
+            "specValue": "TRANSLATED"
+          }
+        ],
+        "addEntityOrderId": null,
+        "workOrderVersion": null,
+        "changeRequiredTask": null,
+        "deleteRequiredTask": null,
+        "changeEntityOrderId": null,
+        "deleteEntityOrderId": null,
+        "preChangeRequiredtask": null,
+        "preChangeEntityOrderId": null,
+        "entityOrderTransactionSpec": null
+      }
+    ]
+  },
+  {
+    "domain": "ORDNG",
+    "order_number": "7915265940",
+    "order_type": "INSTALL",
+    "location_id": "150107",
+    "qos_ind": null,
+    "cnam_ind": null,
+    "as_id": null,
+    "location_name": null,
+    "flow": "Non-RIV",
+    "rootworkflowcaseid": "52933353",
+    "wfcaseid": "52933356",
+    "wf_task_name": "DataCollection",
+    "status": "Completed",
+    "batch_no": 1,
+    "resp_status_code": "CE200",
+    "resp_status_desc": "Success",
+    "tn_count": null,
+    "start_index": 1,
+    "end_index": 500,
+    "transaction_start_time": "2023-08-10T16:34:00.515000",
+    "transaction_end_time": "2023-08-10T16:34:00.788000",
+    "response": {
+      "entityOrder": null,
+      "orderHeader": {
+        "clli": "ORDERTRANSLATION",
+        "flow": "Non-RIV",
+        "supp": false,
+        "bodId": "",
+        "isSupp": false,
+        "region": "US",
+        "dueDate": "",
+        "product": "VOIP",
+        "endIndex": 500,
+        "orderType": "INSTALL",
+        "startIndex": 1,
+        "batchNumber": 1,
+        "dueDateType": "",
+        "serviceType": "HIPC",
+        "enterpriseId": "800212091",
+        "functionCode": "RELEASE",
+        "r2rTnPresent": false,
+        "numberOfR2rTn": 0,
+        "sourceAddress": "https://rest-incoming-interface-e0sv-prod-pam-services-namespace.apps-prod.vpc.verizon.com",
+        "specification": [
+          {
+            "code": "FINAL_TN_COUNT",
+            "value": "1"
+          }
+        ],
+        "transactionId": "connect-voip-provision:52933356:160716511",
+        "isR2rTnPresent": false,
+        "lineOfBusiness": "RETAIL_VOIP",
+        "workflowCaseId": "52933354",
+        "orderHeaderSpec": [
+          {
+            "specName": "SERVICE_INSTANCE_ID",
+            "workflow": null,
+            "specValue": "null"
+          }
+        ],
+        "workOrderNumber": "7915265940",
+        "workOrderVersion": "0",
+        "workflowTaskName": "DataCollection",
+        "originatingSystem": "CANVAS_GUI",
+        "rootWorkflowCaseId": "52933353",
+        "serviceOrderNumber": ""
+      },
+      "responseDetails": {
+        "statusCode": "CE200",
+        "statusDescription": "Success"
+      },
+      "domainAckresponse": null
+    },
+    "failure_details": null
+  }
+]
