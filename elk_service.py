@@ -99,7 +99,7 @@ class ELKService:
             query = {
                 "query": {
                     "bool": {
-                        "must": [
+                        "should": [
                             {
                                 "match_phrase": {
                                     "message": work_order
@@ -123,12 +123,12 @@ class ELKService:
             }
             
             # If task_name is provided, add it to the query
-            if task_name:
-                query["query"]["bool"]["must"].append({
-                    "match_phrase": {
-                        "message": task_name
-                    }
-                })
+            #if task_name:
+            #    query["query"]["bool"]["should"].append({
+            #        "match_phrase": {
+            #            "message": task_name
+            #        }
+            #    })
             
             # Log the query for debugging
             import json
