@@ -1,0 +1,80 @@
+-- Application table to store available applications
+CREATE TABLE applications (
+    id SERIAL PRIMARY KEY,
+    app_name VARCHAR(100) NOT NULL,
+    app_code VARCHAR(50) NOT NULL UNIQUE,
+    description TEXT,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Insert some sample applications
+INSERT INTO applications (app_name, app_code, description) 
+VALUES 
+('Order Management System', 'OMS', 'Handles customer order processing and fulfillment'),
+('Customer Relationship Management', 'CRM', 'Manages customer interactions and relationships'),
+('Billing System', 'BILLING', 'Processes customer billing and invoices'),
+('Inventory Management', 'INVENTORY', 'Tracks product inventory and stock levels'),
+('Network Management System', 'NMS', 'Monitors and manages network infrastructure');
+
+-- Solutions table to store known issues and solutions
+CREATE TABLE solutions (
+    id SERIAL PRIMARY KEY,
+    error_message TEXT NOT NULL,
+    solution TEXT NOT NULL,
+    solution_confidence DECIMAL(5,2) DEFAULT 0.0,
+    solution_steps TEXT[],
+    severity VARCHAR(20) DEFAULT 'Medium',
+    application_id INTEGER REFERENCES applications(id),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Insert some sample solutions
+INSERT INTO solutions (error_message, solution, solution_confidence, solution_steps, severity, application_id)
+VALUES
+('Connection timeout while processing order', 
+ 'Increase the connection timeout setting in the application configuration', 
+ 0.85, 
+ ARRAY['Check the current timeout setting in config.properties', 
+       'Modify the CONNECTION_TIMEOUT parameter to 120 seconds',
+       'Restart the application service'], 
+ 'High',
+ 1),
+ 
+('Database lock exception during checkout process', 
+ 'Implement row-level locking to prevent concurrent modifications', 
+ 0.75, 
+ ARRAY['Identify the transaction causing the lock', 
+       'Add appropriate isolation level in the transaction',
+       'Implement retry mechanism with exponential backoff'], 
+ 'Medium',
+ 1),
+
+('NullPointerException in CustomerProfileService', 
+ 'Add null checks for customer profile data', 
+ 0.90, 
+ ARRAY['Locate the CustomerProfileService class', 
+       'Add null validation before accessing customer properties',
+       'Add proper error handling for missing customer data'], 
+ 'High',
+ 2);
+
+-- Application log settings table for specific log retrieval configurations
+CREATE TABLE app_log_settings (
+    id SERIAL PRIMARY KEY,
+    application_id INTEGER REFERENCES applications(id),
+    elk_index VARCHAR(100) NOT NULL,
+    elk_query_fields TEXT[] DEFAULT ARRAY['message', 'log.level', 'service.name'],
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Insert sample log settings
+INSERT INTO app_log_settings (application_id, elk_index)
+VALUES
+(1, 'oms-logs-*'),
+(2, 'crm-logs-*'),
+(3, 'billing-logs-*'),
+(4, 'inventory-logs-*'),
+(5, 'nms-logs-*');
