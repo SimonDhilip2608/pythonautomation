@@ -3,6 +3,7 @@ import os
 import json
 import logging
 import requests
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
@@ -32,32 +33,55 @@ class VegasGPTService:
                     "summary": "No logs available to analyze."
                 }
             
+            # Format logs for better analysis
+            # Count error logs to ensure we're sending meaningful data
+            error_count = 0
             log_text = ""
-            for log in logs:
-                log_text += f"[{log.get('timestamp')}] [{log.get('level')}] {log.get('message')}\n"
             
+            for log in logs:
+                level = log.get('level', '').upper()
+                message = log.get('message', '')
+                timestamp = log.get('timestamp', '')
+                
+                # If it's an error/severe log, highlight it for better AI recognition
+                if level in ['ERROR', 'SEVERE']:
+                    error_count += 1
+                    log_text += f"ERROR_LOG: [{timestamp}] {message}\n"
+                else:
+                    log_text += f"[{timestamp}] [{level}] {message}\n"
+            
+            logger.info(f"Sending {len(logs)} logs for analysis, including {error_count} error logs")
+            
+            # Enhanced, more detailed prompt
             prompt = f"""
-            Analyze the following system logs and identify any errors or issues:
+            You are a system log analyzer specialized in identifying and categorizing errors. 
+            
+            Analyze the following system logs and extract ALL error messages. Focus on logs that contain 'ERROR' or 'Exception' or error-related terms.
             
             {log_text}
             
-            Please provide:
-            1. A list of all error messages found
-            2. The likely root cause of each error
-            3. The severity level (Critical, High, Medium, Low)
+            For each detected error:
+            1. Extract the full error message
+            2. Determine the likely root cause
+            3. Assign a severity level (Critical, High, Medium, Low)
+            4. Include the timestamp when available
             
-            Format your response as JSON with the structure:
+            Make sure to include EVERY individual error. Don't generalize or group similar errors - list each one separately.
+            
+            Format your response ONLY as a JSON object with the structure:
             {{
                 "errors": [
                     {{
-                        "message": "Error message text",
-                        "root_cause": "Likely cause of the error",
+                        "message": "The EXACT error message text",
+                        "root_cause": "Your analysis of the likely cause",
                         "severity": "Severity level",
                         "timestamp": "When the error occurred"
                     }}
                 ],
-                "summary": "Brief summary of the issues found"
+                "summary": "Brief summary of the overall situation"
             }}
+            
+            If you find no errors, return an empty errors array but still provide a summary.
             """
             
             data = {
@@ -66,8 +90,8 @@ class VegasGPTService:
                 },
                 "model": "VEGAS",
                 "model_settings": {
-                    "temperature": 0.8,
-                    "max_output_tokens": 3200
+                    "temperature": 0.2,  # Lower temperature for more consistent output
+                    "max_output_tokens": 4000
                 }
             }
             
@@ -79,7 +103,7 @@ class VegasGPTService:
             
             logger.debug("Sending logs to Verizon Inspire AI for analysis")
             
-            response = requests.post(inference_url, json=data, headers=headers, timeout=60)
+            response = requests.post(inference_url, json=data, headers=headers, timeout=120)  # Increased timeout
             
             if response.status_code != 200:
                 logger.error(f"AI API error: {response.status_code} - {response.text}")
@@ -88,29 +112,70 @@ class VegasGPTService:
                     "summary": f"Error from AI service: {response.status_code}"
                 }
             
+            # Get the raw response
             ai_response = response.json().get('ai_response', '')
+            logger.debug(f"Received response from AI service: {ai_response[:200]}...")  # Log start of response
             
+            # Improved JSON extraction logic
             try:
+                # Look for JSON in the response
                 json_start = ai_response.find('{')
                 json_end = ai_response.rfind('}') + 1
                 
                 if json_start >= 0 and json_end > json_start:
                     json_str = ai_response[json_start:json_end]
+                    # Try parsing the JSON
                     analysis = json.loads(json_str)
+                    
+                    # Validate expected structure
+                    if not isinstance(analysis.get('errors'), list):
+                        logger.warning("AI response didn't contain errors array")
+                        analysis["errors"] = []
+                    
+                    if "summary" not in analysis:
+                        analysis["summary"] = "Analysis completed without summary."
                 else:
+                    # If no JSON structure found, try to create our own by scanning for error messages
+                    logger.warning("No JSON structure found in AI response, parsing raw text")
+                    errors = []
+                    lines = ai_response.split('\n')
+                    for line in lines:
+                        if "ERROR" in line or "Exception" in line or "error" in line.lower():
+                            errors.append({
+                                "message": line.strip(),
+                                "root_cause": "Unknown - parsed from unstructured response",
+                                "severity": "Unknown",
+                                "timestamp": datetime.now().isoformat()
+                            })
+                    
                     analysis = {
-                        "errors": [],
-                        "summary": "No structured analysis available."
+                        "errors": errors,
+                        "summary": "Parsed unstructured response for errors."
                     }
-            except json.JSONDecodeError:
+            except json.JSONDecodeError as e:
+                logger.error(f"Failed to parse AI response as JSON: {str(e)}")
+                # Fallback analysis - scan for error messages
+                errors = []
+                lines = ai_response.split('\n')
+                for line in lines:
+                    if "ERROR" in line or "Exception" in line or "error" in line.lower():
+                        errors.append({
+                            "message": line.strip(),
+                            "root_cause": "Unknown - parsed from unstructured response",
+                            "severity": "Unknown",
+                            "timestamp": datetime.now().isoformat()
+                        })
+                
                 analysis = {
-                    "errors": [],
-                    "summary": "Could not parse the analysis response."
+                    "errors": errors,
+                    "summary": "Failed to parse JSON response, extracted errors from raw text."
                 }
             
-            analysis["raw_response"] = ai_response
-            
             logger.info(f"Analysis complete. Found {len(analysis.get('errors', []))} errors.")
+            
+            # Store raw response for debugging but not for UI display
+            analysis["_raw_response"] = ai_response
+            
             return analysis
             
         except Exception as e:
