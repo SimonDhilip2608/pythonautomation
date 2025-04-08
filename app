@@ -116,9 +116,6 @@ if submit_button:
         # Use updated retrieve_logs method with application parameters
         logs = elk_service.retrieve_logs(
             work_order, 
-            selected_app['id'], 
-            selected_app['app_code'], 
-            elk_index, 
             start_time_str, 
             end_time_str
         )
@@ -267,12 +264,3 @@ with st.sidebar:
         else:
             st.error("Synapt database not configured")
             
-    with st.expander("Available Applications"):
-        if applications:
-            for app in applications:
-                st.markdown(f"**{app['app_name']}** ({app['app_code']})")
-                if app.get('description'):
-                    st.markdown(f"_{app['description']}_")
-                st.markdown("---")
-        else:
-            st.warning("No applications available")
