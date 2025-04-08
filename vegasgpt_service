@@ -55,24 +55,11 @@ class VegasGPTService:
             {log_text}
             
             Please provide:
-            1. A list of all error messages found
-            2. The likely root cause of each error
-            3. The severity level (Critical, High, Medium, Low)
-            
-            Format your response as JSON with the structure:
-            {{
-                "errors": [
-                    {{
-                        "message": "Error message text",
-                        "root_cause": "Likely cause of the error",
-                        "severity": "Severity level",
-                        "timestamp": "When the error occurred"
-                    }}
-                ],
-                "summary": "Brief summary of the issues found"
-            }}
-            
-            Only include the JSON in your response, with no other text.
+            1. From the log can you infer the possible reasons for the failure
+            2. Can you sumarise your finding and give me the root cause
+            3. If you find the possible database or server entity, please list that aswell
+            4. If you find the SQL error list that aswell
+
             """
             
             logger.debug(f"Sending logs to Vegas GPT for analysis")
@@ -80,9 +67,9 @@ class VegasGPTService:
             # Prepare request based on the working example
             data = {
                 "inference_type": "generate",
-                "user_id": "LogAdvisor-App",
-                "agent_id": "LogAdvisor",
-                "task_id": "Log Analysis",
+                "user_id": "Synapt-Prod",
+                "agent_id": "SRE Prompt Playground Synapt",
+                "task_id": "Open Prompt SYNAPT",
                 "variables": {
                     "{prompt}": prompt
                 },
@@ -281,9 +268,9 @@ class VegasGPTService:
             # Prepare request based on the working example
             data = {
                 "inference_type": "generate",
-                "user_id": "LogAdvisor-App",
-                "agent_id": "LogAdvisor",
-                "task_id": "Connection Test",
+                 "user_id": "Synapt-Prod",
+                "agent_id": "SRE Prompt Playground Synapt",
+                "task_id": "Open Prompt SYNAPT",
                 "variables": {
                     "{prompt}": "Return 'Connection successful' as a simple test."
                 },
