@@ -1,0 +1,246 @@
+import streamlit as st
+import os
+import pandas as pd
+from langchain_community.document_loaders import PyPDFLoader
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain.vectorstores import FAISS
+from langchain_core.prompts import ChatPromptTemplate
+import requests
+import re
+
+# Create a dark theme with CSS
+st.markdown(
+    """
+    <style>
+    body {
+        background-color: #181818;  /* Dark grey background */
+        color: #F0F0F0;
+        margin: 0;  /* Remove any default margin */
+    }
+    .stTextInput, .stTextArea {
+        background-color: #333333;
+        color: #F0F0F0;
+        border-radius: 25px;
+        padding: 10px;
+        border: none;  /* Remove default border */
+        box-shadow: none;  /* Remove shadow */
+    }
+    .stButton > button {
+        background-color: #4CAF50;
+        color: white;
+        border-radius: 25px;
+        border: none;  /* Remove default border */
+        box-shadow: none;  /* Remove shadow */
+    }
+    .chat-container {
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 20px;
+        border-radius: 10px;
+        background-color: #1E1E1E;  /* Dark chat background */
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+    }
+    .user-message, .bot-message {
+        margin: 5px 0;
+        padding: 10px;
+        border-radius: 15px;
+        color: white;
+        text-align: left;
+    }
+    .user-message {
+        background-color: #2C2C2C;  /* User message bubble */
+    }
+    .bot-message {
+        background-color: #3A3A3A;  /* Bot message bubble */
+    }
+    * {
+        outline: none;  /* Remove outlines from all elements */
+    }
+    .footer {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        text-align: left;
+        padding: 10px;
+        background-color: #181818;  /* Match footer with body */
+        color: #F0F0F0;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
+# Set emoji for user and bot
+user_emoji = "🙋‍♂️"
+bot_emoji = "🤖"
+
+# Create two columns for logo
+col1, col2 = st.columns(2)
+
+# Display the logos in the columns
+with col1:
+    st.image("imange_url", width=150)
+
+# Initialize session state for chat history
+if "chat_history" not in st.session_state:
+    st.session_state.chat_history = []
+
+# Function to process PDF files with caching
+@st.cache_resource
+def process_pdf_files(directory):
+    pdf_data = []
+    for filename in os.listdir(directory):
+        if filename.endswith(".pdf"):
+            file_path = os.path.join(directory, filename)
+            print(f"Loading PDF file: {filename}")
+            loader = PyPDFLoader(file_path)
+            data = loader.load()
+
+            # Adjust the page number to start from 1
+            for document in data:
+                document.metadata['page'] = document.metadata['page'] + 1  # Increment page number by 1
+
+            pdf_data.extend(data)
+
+    return pdf_data
+
+# Function to create the vector store with caching, using _docs to bypass hash error
+@st.cache_resource
+def create_vector_store(_docs):
+    embeddings = HuggingFaceEmbeddings()
+    vectorstore = FAISS.from_documents(documents=_docs, embedding=embeddings)
+    return vectorstore.as_retriever(search_type="similarity", search_kwargs={"k":10})
+
+# Load PDF files and split them into documents
+data = process_pdf_files('/usr/apps/synapt/git-synapt/FIM_Automation/pdf/')
+text_splitter = RecursiveCharacterTextSplitter(chunk_size=800, chunk_overlap=200)
+docs = text_splitter.split_documents(data)
+
+# Create the vector store (note the use of _docs instead of docs)
+retriever = create_vector_store(docs)
+
+# Load the Excel file containing document names and URLs
+excel_file = '/usr/apps/synapt/git-synapt/FIM_Automation/urlname.xlsx'
+doc_urls_df = pd.read_excel(excel_file)
+
+# Function to match document name with URL
+def get_url_for_document(doc_name):
+    matched_row = doc_urls_df[doc_urls_df['name'] == doc_name]
+    if not matched_row.empty:
+        return matched_row['URL'].values[0]
+    return None
+
+# Function to extract the first page number from the response
+def extract_first_page_number(response):
+    # Regex to match page numbers in different formats (e.g., '32-35', '85', '24-27')
+    match = re.search(r"(Page(?: No)? Range: '(\d+))", response)
+    if match:
+        return match.group(2)  # Return the first page number found
+    return None
+
+# Function to generate a URL with the page number appended
+def generate_pdf_url_with_page(url, page_number):
+    # Modify the URL structure to include the page number (assuming a viewer that supports it)
+    return f"{url}#page={page_number}"
+
+# Input box for the user query
+query = st.chat_input(" ")
+
+# System prompt for GCP
+system_prompt = (
+    "You are an assistant designed to help with troubleshooting tasks.\n\n"
+    "Objective:\n"
+    "- Read and interpret the provided context from the troubleshooting manual.\n"
+    "- Provide a clear and concise response.\n"
+    "- Print the Document name from the query context, for example.\n"
+    "- (Document name: 'name of document'.pdf).\n"
+    "Instructions:\n\n"
+    "1. **Review Information:**\n"
+    "   - Thoroughly review all given information to understand the context and the issue at hand.\n"
+    "2. **Sequential Explanation:**\n"
+    "   - Provide explanations in a clear, logical, and sequential manner to ensure understanding.\n"
+    "3. **Clear Steps:**\n"
+    "   - Offer clear, sequential steps to resolve the issue, ensuring each step is actionable and easy to understand.\n"
+    "   - Use bullet points or numbered lists for clarity.\n"
+    "4. **Additional Information:**\n"
+    "   - If the provided context does not fully address the problem, indicate that additional information may be required.\n"
+    "   - Specify what additional information is needed.\n"
+    "5. **Reference Manual:**\n"
+    "   - Reference specific sections of the manual, including page numbers, in the format (Page No Range: '28'), which is present at the bottom of the PDF. This is mandatory.\n"
+    "   - Ensure that each reference is accurate and directly related to the content generated.\n"
+    "6. **Complete Response:**\n"
+    "   - Ensure all necessary information is included, maintaining clarity and completeness in the instructions.\n"
+    "   - Avoid unnecessary details but include all critical information.\n"
+    "7. **Irrelevant Query Handling:**\n"
+    "   - If the user query is irrelevant to the context , reply with: 'We are not having this knowledge base. Can you please provide more information?'\n\n"
+    "Note: The REACT approach should be used internally to generate the response, but only the final troubleshooting steps, page numbers, and document name should be displayed to the user.\n\n"
+    "{context}"
+)
+
+prompt = ChatPromptTemplate.from_messages(
+    [
+        ("system", system_prompt),
+        ("human", "{input}"),
+    ]
+)
+
+# Function to send prompt to GCP
+def answer_from_GCP(prompt):
+    data = {
+        "inference_type": "generate",
+        "user_id": "Synapt-DEV",
+        "agent_id": "SRE Prompt Playground",
+        "task_id": "Open Prompt",
+        "variables": {
+            "{prompt}": prompt
+        },
+        "model": "VEGAS",
+        "model_settings": {
+            "temperature": 0.8,
+            "max_output_tokens": 3200,
+        }
+    }
+    agents_url = "url"
+    agents_token = "token"
+    inference_url = agents_url + "inference/generate"
+    headers = {'X-api-key': agents_token, 'Content-Type': 'application/json'}
+    response = requests.post(inference_url, json=data, headers=headers)
+    return response.json()['ai_response']
+
+# Check if the user query is not empty
+if query:
+    # Retrieve relevant documents with page numbers
+    relevant_docs = retriever.get_relevant_documents(query)
+
+    # Create the context for the LLM
+    context = system_prompt.format(context=relevant_docs)
+
+    # Get the response from GCP
+    response = answer_from_GCP(context)
+
+    # Check for any document name in the response and append URL with page number
+    for doc_name in doc_urls_df['name']:
+        if doc_name in response:
+            url = get_url_for_document(doc_name)
+            if url:
+                # Extract the first page number from the response
+                page_number = extract_first_page_number(response)
+                if page_number:
+                    # Generate the PDF URL with the page number
+                    url_with_page = generate_pdf_url_with_page(url, page_number)
+                    response += f"\n[Document URL]({url_with_page})"
+
+    # Add the query and response to the chat history
+    st.session_state.chat_history.append({"query": query, "response": response})
+
+# Display the chat history with emojis in a dynamic container to avoid page blur
+chat_container = st.empty()
+with chat_container.container():
+    for chat in st.session_state.chat_history:
+        st.markdown(f"<div class='user-message'>{user_emoji} You: {chat['query']}</div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='bot-message'>{bot_emoji} Synapt: {chat['response']}</div>", unsafe_allow_html=True)
+
+# Footer that persists
+st.markdown("<div class='footer'><b>Powered by Synapt</b></div>", unsafe_allow_html=True)
