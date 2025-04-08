@@ -67,8 +67,78 @@ class SynaptService:
         if self.conn is not None and not self.conn.closed:
             self.conn.close()
             self.conn = None
+
+    def get_applications(self):
+        """Retrieve the list of applications from the database."""
+        try:
+            conn = self.get_connection()
+            if conn is None:
+                logger.error("Could not connect to database to retrieve applications")
+                return []
+                
+            with conn.cursor(cursor_factory=RealDictCursor) as cursor:
+                query = """
+                SELECT 
+                    id, 
+                    app_name, 
+                    app_code, 
+                    description
+                FROM 
+                    applications
+                WHERE 
+                    is_active = TRUE
+                ORDER BY 
+                    app_name;
+                """
+                
+                cursor.execute(query)
+                applications = cursor.fetchall()
+                
+                logger.info(f"Retrieved {len(applications)} applications from database")
+                return applications
+                
+        except Exception as e:
+            logger.error(f"Error retrieving applications from database: {str(e)}")
+            return []
+
+    def get_application_log_settings(self, application_id):
+        """Retrieve ELK log settings for a specific application."""
+        try:
+            conn = self.get_connection()
+            if conn is None:
+                logger.error("Could not connect to database to retrieve log settings")
+                return None
+                
+            with conn.cursor(cursor_factory=RealDictCursor) as cursor:
+                query = """
+                SELECT 
+                    als.elk_index,
+                    als.elk_query_fields,
+                    a.app_code
+                FROM 
+                    app_log_settings als
+                JOIN
+                    applications a ON als.application_id = a.id
+                WHERE 
+                    als.application_id = %s;
+                """
+                
+                cursor.execute(query, (application_id,))
+                log_settings = cursor.fetchone()
+                
+                if log_settings:
+                    logger.info(f"Retrieved log settings for application ID {application_id}")
+                    return log_settings
+                else:
+                    logger.warning(f"No log settings found for application ID {application_id}")
+                    return None
+                
+        except Exception as e:
+            logger.error(f"Error retrieving log settings from database: {str(e)}")
+            return None
     
-    def find_solutions(self, errors):
+    def find_solutions(self, errors, application_id=None):
+        """Find solutions for errors, optionally filtered by application."""
         try:
             if not errors:
                 logger.warning("No errors provided to find solutions for")
@@ -94,24 +164,51 @@ class SynaptService:
                 
                 try:
                     with conn.cursor(cursor_factory=RealDictCursor) as cursor:
-                        query = """
-                        SELECT 
-                            id, 
-                            error_message,
-                            solution,
-                            solution_confidence AS confidence,
-                            solution_steps,
-                            severity
-                        FROM 
-                            solutions 
-                        WHERE 
-                            error_message ILIKE %s
-                        ORDER BY
-                            solution_confidence DESC
-                        LIMIT 1;
-                        """
+                        # Modify query to include application filtering if provided
+                        if application_id:
+                            query = """
+                            SELECT 
+                                s.id, 
+                                s.error_message,
+                                s.solution,
+                                s.solution_confidence AS confidence,
+                                s.solution_steps,
+                                s.severity,
+                                a.app_name
+                            FROM 
+                                solutions s
+                            JOIN
+                                applications a ON s.application_id = a.id
+                            WHERE 
+                                s.error_message ILIKE %s
+                                AND s.application_id = %s
+                            ORDER BY
+                                s.solution_confidence DESC
+                            LIMIT 1;
+                            """
+                            cursor.execute(query, (f"%{error_message[:50]}%", application_id))
+                        else:
+                            query = """
+                            SELECT 
+                                s.id, 
+                                s.error_message,
+                                s.solution,
+                                s.solution_confidence AS confidence,
+                                s.solution_steps,
+                                s.severity,
+                                a.app_name
+                            FROM 
+                                solutions s
+                            JOIN
+                                applications a ON s.application_id = a.id
+                            WHERE 
+                                s.error_message ILIKE %s
+                            ORDER BY
+                                s.solution_confidence DESC
+                            LIMIT 1;
+                            """
+                            cursor.execute(query, (f"%{error_message[:50]}%",))
                         
-                        cursor.execute(query, (f"%{error_message[:50]}%",))
                         result = cursor.fetchone()
                         
                         if result:
@@ -136,7 +233,8 @@ class SynaptService:
                                 "solution": result.get('solution', 'No specific solution found.'),
                                 "confidence": float(result.get('confidence', 0)),
                                 "steps": steps,
-                                "id": result.get('id')  # Include the solution ID for reference
+                                "id": result.get('id'),  # Include the solution ID for reference
+                                "app_name": result.get('app_name')
                             })
                         else:
                             # No solution found in database
