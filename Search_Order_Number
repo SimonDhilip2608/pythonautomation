@@ -8,7 +8,7 @@ curl -X 'POST' \
 
 
 
-
+sample output from the search order
 [
   {
     "domain": "ORDNG",
