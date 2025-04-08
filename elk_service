@@ -79,7 +79,7 @@ class ELKService:
             logger.error(traceback.format_exc())
             return False, f"Error connecting to ELK service: {str(e)}"
     
-    def retrieve_logs(self, work_order, task_name, start_time, end_time, max_logs=1000):
+    def retrieve_logs(self, work_order, application_id, app_code, elk_index, start_time, end_time, max_logs=1000):
         """Retrieve logs from ELK based on the provided parameters."""
         if not self.is_configured():
             logger.error("ELK Service is not configured properly")
@@ -91,18 +91,44 @@ class ELKService:
                 logger.error("Failed to initialize Elasticsearch client")
                 return None
             
-            # Log input parameters
-            logger.debug(f"ELK query parameters: work_order={work_order}, task_name={task_name}")
-            logger.debug(f"ELK query time range: start={start_time}, end={end_time}")
+            # Use application-specific index if provided, otherwise use default
+            index_to_use = elk_index if elk_index else self.elk_index
             
-            # Build the search query based on your working example
+            # Log input parameters
+            logger.debug(f"ELK query parameters: work_order={work_order}, application_id={application_id}, app_code={app_code}")
+            logger.debug(f"ELK query time range: start={start_time}, end={end_time}")
+            logger.debug(f"Using index pattern: {index_to_use}")
+            
+            # Build the search query based on work order and application code
             query = {
                 "query": {
                     "bool": {
-                        "should": [
+                        "must": [
                             {
                                 "match_phrase": {
                                     "message": work_order
+                                }
+                            },
+                            {
+                                "bool": {
+                                    "should": [
+                                        {
+                                            "match": {
+                                                "service.name": app_code
+                                            }
+                                        },
+                                        {
+                                            "match": {
+                                                "service": app_code
+                                            }
+                                        },
+                                        {
+                                            "match_phrase": {
+                                                "message": app_code
+                                            }
+                                        }
+                                    ],
+                                    "minimum_should_match": 1
                                 }
                             }
                         ],
@@ -122,27 +148,19 @@ class ELKService:
                 ]
             }
             
-            # If task_name is provided, add it to the query
-            #if task_name:
-            #    query["query"]["bool"]["should"].append({
-            #        "match_phrase": {
-            #            "message": task_name
-            #        }
-            #    })
-            
             # Log the query for debugging
             import json
             logger.debug(f"ELK query: {json.dumps(query, indent=2)}")
             
             # Perform the search
-            logger.info(f"Sending search request to Elasticsearch for work order {work_order}")
-            response = client.search(index=self.elk_index, body=query)
+            logger.info(f"Sending search request to Elasticsearch for work order {work_order} and application {app_code}")
+            response = client.search(index=index_to_use, body=query)
             
             # Process the response
             hits = response.get('hits', {}).get('hits', [])
             
             if not hits:
-                logger.info(f"No logs found for work order {work_order}")
+                logger.info(f"No logs found for work order {work_order} and application {app_code}")
                 return []
             
             logger.info(f"Retrieved {len(hits)} logs from ELK")
@@ -152,13 +170,22 @@ class ELKService:
             for hit in hits:
                 source = hit.get('_source', {})
                 
+                # Handle different field naming in Elasticsearch
+                timestamp = source.get('@timestamp', source.get('timestamp', ''))
+                level = source.get('level', source.get('log.level', source.get('log_level', 'INFO')))
+                message = source.get('message', '')
+                service = source.get('service.name', source.get('service', source.get('service_name', '')))
+                transaction_id = source.get('transaction_id', source.get('transaction.id', ''))
+                
                 # Create a standardized log entry
                 log_entry = {
-                    'timestamp': source.get('@timestamp', source.get('timestamp', '')),
-                    'level': source.get('level', source.get('log_level', 'INFO')),
-                    'message': source.get('message', ''),
-                    'service': source.get('service', source.get('service_name', '')),
-                    'transaction_id': source.get('transaction_id', '')
+                    'timestamp': timestamp,
+                    'level': level,
+                    'message': message,
+                    'service': service,
+                    'transaction_id': transaction_id,
+                    'application_id': application_id,
+                    'app_code': app_code
                 }
                 
                 # Add the log entry to our results
@@ -168,7 +195,7 @@ class ELKService:
             error_logs = []
             for log in logs:
                 message = log.get('message', '')
-                if 'Exception' in message or 'Error' in message:
+                if 'Exception' in message or 'Error' in message or log.get('level', '').upper() in ['ERROR', 'SEVERE']:
                     error_logs.append(log)
                     logger.debug(f"Found error in log: {message[:100]}...")
             
