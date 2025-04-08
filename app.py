@@ -13,38 +13,31 @@ LOG_DIR = os.path.join(PROJECT_DIR,'logs')
 
 log_file_path = os.path.join(LOG_DIR,'log_advisor_log')
 
-# Set up logging
-logging.basicConfig(level=logging.INFO,
+logging.basicConfig(level=logging.DEBUG,
                     format='%(asctime)s - %(name)s - %(levelname)s -%(message)s',
                     handlers=[logging.StreamHandler(),RotatingFileHandler(log_file_path,maxBytes=5242880,backupCount=3)])
 logger = logging.getLogger(__name__)
 
-# Load environment variables
 load_dotenv()
 
-# Import service modules (create these files next)
 from services.elk_service import ELKService
 from services.vegasgpt_service import VegasGPTService
 from services.synapt_service import SynaptService
 
-# Page configuration
 st.set_page_config(
     page_title="Log Advisor",
     page_icon="🔍",
     layout="wide"
 )
 
-# Application title and description
 st.title("Log Advisor")
-st.markdown("**Diagnose and resolve errors from system logs**")
+st.markdown("**THE SMART Solution provider with VZGPT/SYNAPT**")
 st.markdown("---")
 
-# Initialize services
 elk_service = ELKService()
 vegasgpt_service = VegasGPTService()
 synapt_service = SynaptService()
 
-# Input form
 st.header("Search Parameters")
 
 with st.form("log_search_form"):
@@ -62,23 +55,18 @@ with st.form("log_search_form"):
 
     submit_button = st.form_submit_button("Analyze Logs")
 
-# Process the form submission
 if submit_button:
-    # Input validation
     if not work_order or not task_name:
         st.error("Work Order and Task Name are required fields")
     elif end_time <= start_time:
         st.error("End time must be after start time")
     else:
-        # Show a progress bar for the analysis steps
         progress_bar = st.progress(0)
         st.markdown("### Analysis Progress")
         status_text = st.empty()
         
-        # Step 1: Retrieve logs from ELK
         status_text.text("Retrieving logs from ELK...")
         
-        # Format dates for ELK query
         start_datetime = datetime.combine(start_date,start_time)
         end_datetime = datetime.combine(end_date,end_time)
 
@@ -93,12 +81,10 @@ if submit_button:
         elif not logs:
             st.warning("No logs found for the specified criteria.")
         else:
-            # Step 2: Analyze logs with Google Gemini
-            status_text.text("Analyzing logs with AI Service...")
+            status_text.text("Analyzing logs with VZGPT Service...")
             error_analysis = vegasgpt_service.analyze_logs(logs)
             progress_bar.progress(66)
             
-            # Step 3: Find solutions from Synapt
             status_text.text("Finding solutions from Synapt...")
             if error_analysis and error_analysis.get('errors'):
                 solution = synapt_service.find_solutions(error_analysis.get('errors'))
@@ -108,23 +94,19 @@ if submit_button:
             progress_bar.progress(100)
             status_text.text("Analysis complete!")
             
-            # Display results in tabs
             st.markdown("## Analysis Results")
             
             tab1, tab2, tab3 = st.tabs(["Retrieved Logs", "Error Analysis", "Recommended Solutions"])
             
-            # Tab 1: Retrieved Logs
             with tab1:
                 st.subheader(f"Logs ({len(logs)})")
                 
-                # Filter options
                 log_level_filter = st.multiselect(
                     "Filter by Log Level",
                     options=["INFO", "WARNING", "ERROR", "DEBUG", "TRACE"],
                     default=["INFO", "WARNING", "ERROR"]
                 )
                 
-                # Show logs with filtering
                 filtered_logs = [log for log in logs if log.get('level', '').upper() in log_level_filter]
                 
                 st.text(f"Showing {len(filtered_logs)} of {len(logs)} logs")
@@ -135,7 +117,6 @@ if submit_button:
                     message = log.get('message', '')
                     service = log.get('service', 'unknown')
                     
-                    # Style based on log level
                     if level in ['ERROR', 'SEVERE']:
                         st.error(f"[{timestamp}] [{service}] {message}")
                     elif level in ['WARNING', 'WARN']:
@@ -143,7 +124,6 @@ if submit_button:
                     else:
                         st.info(f"[{timestamp}] [{service}] {message}")
             
-            # Tab 2: Error Analysis
             with tab2:
                 if error_analysis and error_analysis.get('errors'):
                     st.subheader("Detected Errors")
@@ -163,7 +143,6 @@ if submit_button:
                 else:
                     st.success("No errors detected in the logs.")
             
-            # Tab 3: Solutions
             with tab3:
                 if solution and solution.get('recommendations'):
                     st.subheader("Solution Recommendations")
@@ -198,7 +177,6 @@ if submit_button:
                     else:
                         st.success("No errors detected, no solutions needed.")
 
-# Add helpful information in the sidebar
 with st.sidebar:
     st.header("About Log Advisor")
     st.markdown("""
@@ -213,7 +191,6 @@ with st.sidebar:
     
     st.markdown("---")
     
-    # Show connection status for services
     st.subheader("Service Status")
     elk_status = ":green[Connected]" if elk_service.is_configured() else ":red[Not Configured]"
     vegas_status = ":green[Connected]" if vegasgpt_service.is_configured() else ":red[Not Configured]"
