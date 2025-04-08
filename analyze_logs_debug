@@ -1,0 +1,35 @@
+# Add this method to your VegasGPTService class in vegasgpt_service.py
+
+def analyze_logs_debug(self, logs):
+    """Debug version that prints what's being sent and received"""
+    if not logs:
+        print("No logs provided for analysis")
+        return None
+        
+    # Count error logs and print them
+    error_logs = []
+    for log in logs:
+        level = log.get('level', '').upper()
+        message = log.get('message', '')
+        if 'ERROR' in level or 'Exception' in message or 'Error' in message:
+            error_logs.append(log)
+    
+    print(f"Total logs: {len(logs)}")
+    print(f"Error logs detected: {len(error_logs)}")
+    
+    # Print first 5 error logs for inspection
+    print("\nSAMPLE ERROR LOGS:")
+    for i, log in enumerate(error_logs[:5]):
+        print(f"{i+1}. {log.get('timestamp')} - {log.get('level')} - {log.get('message')[:100]}...")
+    
+    return {
+        "errors": [
+            {
+                "message": log.get('message'),
+                "root_cause": "Manually extracted from logs",
+                "severity": "High",
+                "timestamp": log.get('timestamp')
+            } for log in error_logs[:10]  # Take first 10 error logs
+        ],
+        "summary": f"Found {len(error_logs)} errors in logs through manual extraction."
+    }
