@@ -11,14 +11,12 @@ class SynaptService:
     
     def __init__(self):
         """Initialize the Synapt PostgreSQL database connection."""
-        # Database connection parameters
         self.db_host = os.getenv('SYNAPT_DB_HOST')
         self.db_port = os.getenv('SYNAPT_DB_PORT')
         self.db_name = os.getenv('SYNAPT_DB')
         self.db_user = os.getenv('SYNAPT_USER')
         self.db_password = os.getenv('SYNAPT_PASSWORD')
         
-        # Connection pool or single connection
         self.conn = None
     
     def is_configured(self):
@@ -71,15 +69,6 @@ class SynaptService:
             self.conn = None
     
     def find_solutions(self, errors):
-        """
-        Query Synapt database to find solutions for the identified errors.
-        
-        Args:
-            errors (list): List of error objects with message, root_cause, and severity
-        
-        Returns:
-            dict: Solutions for the identified errors
-        """
         try:
             if not errors:
                 logger.warning("No errors provided to find solutions for")
@@ -95,10 +84,8 @@ class SynaptService:
                     "summary": "Could not connect to solution database."
                 }
             
-            # Prepare recommendations container
             recommendations = []
             
-            # Process each error to find a solution
             for error in errors:
                 error_message = error.get('message', '')
                 
@@ -106,9 +93,7 @@ class SynaptService:
                     continue
                 
                 try:
-                    # Use a cursor that returns dictionaries
                     with conn.cursor(cursor_factory=RealDictCursor) as cursor:
-                        # Search for solutions by partial matching on error message
                         query = """
                         SELECT 
                             id, 
@@ -126,7 +111,6 @@ class SynaptService:
                         LIMIT 1;
                         """
                         
-                        # Use ILIKE for case-insensitive pattern matching with % wildcards
                         cursor.execute(query, (f"%{error_message[:50]}%",))
                         result = cursor.fetchone()
                         
@@ -172,7 +156,6 @@ class SynaptService:
                         "steps": []
                     })
             
-            # Prepare the overall solution response
             solution_response = {
                 "recommendations": recommendations,
                 "summary": f"Found {len([r for r in recommendations if r.get('confidence', 0) > 0])} solution(s) for {len(recommendations)} identified errors."
@@ -187,7 +170,6 @@ class SynaptService:
                 "summary": f"Error retrieving solutions: {str(e)}"
             }
         finally:
-            # Keep connection open for future queries
             pass
     
     def __del__(self):
