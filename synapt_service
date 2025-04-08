@@ -84,7 +84,7 @@ class SynaptService:
                     app_code, 
                     description
                 FROM 
-                    applications
+                    synapt_dev_db.applications
                 WHERE 
                     is_active = TRUE
                 ORDER BY 
@@ -116,7 +116,7 @@ class SynaptService:
                     als.elk_query_fields,
                     a.app_code
                 FROM 
-                    app_log_settings als
+                    synapt_dev_db.app_log_settings als
                 JOIN
                     applications a ON als.application_id = a.id
                 WHERE 
@@ -176,7 +176,7 @@ class SynaptService:
                                 s.severity,
                                 a.app_name
                             FROM 
-                                solutions s
+                                synapt_dev_db.solutions s
                             JOIN
                                 applications a ON s.application_id = a.id
                             WHERE 
@@ -198,7 +198,7 @@ class SynaptService:
                                 s.severity,
                                 a.app_name
                             FROM 
-                                solutions s
+                                synapt_dev_db.solutions s
                             JOIN
                                 applications a ON s.application_id = a.id
                             WHERE 
