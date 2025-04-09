@@ -1,0 +1,188 @@
+# services/elk_service.py
+import os
+import logging
+import traceback
+from elasticsearch import Elasticsearch
+import pandas as pd
+from datetime import datetime
+
+logger = logging.getLogger(__name__)
+
+class ELKService:
+    """Service for retrieving logs from ELK using the Elasticsearch Python client."""
+    
+    def __init__(self):
+        """Initialize the ELK service with endpoint and credentials from environment."""
+        self.es_host = os.getenv('ELK_API_ENDPOINT')
+        self.username = os.getenv('ELK_USERNAME')
+        self.password = os.getenv('ELK_PASSWORD')
+        self.elk_index = os.getenv('ELK_INDEX', 'logs-*')
+        self.elk_namespace = os.getenv('ELK_NAMESPACE')
+        
+        # Debug logging for configuration
+        if not self.es_host:
+            logger.warning("ELK_API_ENDPOINT environment variable is not set")
+        if not self.username:
+            logger.warning("ELK_USERNAME environment variable is not set")
+        if not self.password:
+            logger.warning("ELK_PASSWORD environment variable is not set")
+        
+        logger.info(f"ELK Service initialized with host: {self.es_host}, index: {self.elk_index}, namespace: {self.elk_namespace or 'None'}")
+        
+        # Initialize Elasticsearch client
+        self.client = None
+    
+    def get_client(self):
+        """Get or create an Elasticsearch client."""
+        if self.client is None and self.is_configured():
+            try:
+                self.client = Elasticsearch(
+                    [self.es_host],
+                    basic_auth=(self.username, self.password),
+                    verify_certs=False
+                )
+                logger.debug("Elasticsearch client initialized")
+            except Exception as e:
+                logger.error(f"Failed to initialize Elasticsearch client: {str(e)}")
+                self.client = None
+        
+        return self.client
+    
+    def is_configured(self):
+        """Check if the service is properly configured."""
+        is_config = bool(self.es_host and self.username and self.password)
+        logger.debug(f"ELK Service configured: {is_config}")
+        return is_config
+    
+    def test_connection(self):
+        """Test the connection to the ELK service."""
+        if not self.is_configured():
+            return False, "ELK Service is not configured properly"
+            
+        try:
+            client = self.get_client()
+            if client is None:
+                return False, "Failed to initialize Elasticsearch client"
+                
+            # Test the connection with a simple info request
+            info = client.info()
+            
+            if info and 'version' in info:
+                es_version = info['version']['number']
+                cluster_name = info.get('cluster_name', 'unknown')
+                return True, f"Successfully connected to Elasticsearch {es_version} (cluster: {cluster_name})"
+            else:
+                return False, "Connected but received unexpected response format"
+                
+        except Exception as e:
+            logger.error(f"Error testing ELK service connection: {str(e)}")
+            logger.error(traceback.format_exc())
+            return False, f"Error connecting to ELK service: {str(e)}"
+    
+    def retrieve_logs(self, work_order, start_time, end_time, max_logs=1000):
+        """Retrieve logs from ELK based on the provided parameters."""
+        if not self.is_configured():
+            logger.error("ELK Service is not configured properly")
+            return None
+            
+        try:
+            client = self.get_client()
+            if client is None:
+                logger.error("Failed to initialize Elasticsearch client")
+                return None
+            
+            # Log input parameters
+            logger.debug(f"ELK query parameters: work_order={work_order}")
+            logger.debug(f"ELK query time range: start={start_time}, end={end_time}")
+            
+            # Build the search query based on your working example
+            query = {
+                "query": {
+                    "bool": {
+                        "should": [
+                            {
+                                "match_phrase": {
+                                    "message": work_order
+                                }
+                            }
+                        ],
+                        "filter": {
+                            "range": {
+                                "@timestamp": {
+                                    "gte": start_time,
+                                    "lte": end_time
+                                }
+                            }
+                        }
+                    }
+                },
+                "size": max_logs,
+                "sort": [
+                    {"@timestamp": {"order": "asc"}}
+                ]
+            }
+            
+            # Log the query for debugging
+            import json
+            logger.debug(f"ELK query: {json.dumps(query, indent=2)}")
+            
+            # Perform the search
+            logger.info(f"Sending search request to Elasticsearch for work order {work_order}")
+            response = client.search(index=self.elk_index, body=query)
+            
+            # Process the response
+            hits = response.get('hits', {}).get('hits', [])
+            
+            if not hits:
+                logger.info(f"No logs found for work order {work_order}")
+                return []
+            
+            logger.info(f"Retrieved {len(hits)} logs from ELK")
+            
+            # Extract log messages
+            logs = []
+            for hit in hits:
+                source = hit.get('_source', {})
+                
+                # Create a standardized log entry
+                log_entry = {
+                    'timestamp': source.get('@timestamp', source.get('timestamp', '')),
+                    'level': source.get('level', source.get('log_level', 'INFO')),
+                    'message': source.get('message', ''),
+                    'service': source.get('service', source.get('service_name', '')),
+                    'transaction_id': source.get('transaction_id', '')
+                }
+                
+                # Add the log entry to our results
+                logs.append(log_entry)
+            
+            # Analyze logs to extract error messages (similar to your example code)
+            error_logs = []
+            for log in logs:
+                message = log.get('message', '')
+                if 'Exception' in message or 'Error' in message:
+                    error_logs.append(log)
+                    logger.debug(f"Found error in log: {message[:100]}...")
+            
+            logger.info(f"Found {len(error_logs)} logs containing errors")
+            
+            # Return all logs - the VegasGPT will analyze them
+            return logs
+            
+        except Exception as e:
+            logger.error(f"Error retrieving logs from ELK: {str(e)}")
+            logger.error(traceback.format_exc())
+            return None
+    
+    def reset_connection(self):
+        """Reset the Elasticsearch client connection."""
+        if self.client:
+            try:
+                self.client.close()
+            except:
+                pass
+            finally:
+                self.client = None
+        
+        logger.info("Elasticsearch client connection reset")
+        return True
