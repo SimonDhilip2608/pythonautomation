@@ -1,0 +1,349 @@
+# services/vegasgpt_service.py
+import os
+import json
+import logging
+import requests
+import traceback
+
+logger = logging.getLogger(__name__)
+
+class VegasGPTService:
+    """Service for analyzing logs using Verizon Inspire API."""
+    
+    def __init__(self):
+        """Initialize the AI service with API endpoint and token from environment."""
+        self.agents_url = os.getenv('INSPIRE_AGENT_URL', '').rstrip('/')
+        self.agents_token = os.getenv('INSPIRE_AGENT_TOKEN')
+        
+        # Debug logging for configuration
+        if not self.agents_url:
+            logger.warning("INSPIRE_AGENT_URL environment variable is not set")
+        if not self.agents_token:
+            logger.warning("INSPIRE_AGENT_TOKEN environment variable is not set")
+            
+        logger.info(f"Vegas GPT Service initialized with URL: {self.agents_url}")
+    
+    def is_configured(self):
+        """Check if the service is properly configured."""
+        is_config = bool(self.agents_url and self.agents_token)
+        logger.debug(f"Vegas GPT Service configured: {is_config}")
+        return is_config
+    
+    def analyze_logs(self, logs=None, workflow_data=None, app_code=None):
+        """Analyze logs and workflow data using the Verizon Inspire API to identify errors."""
+        if not self.is_configured():
+            logger.error("Vegas GPT Service is not configured properly")
+            return {"errors": [], "summary": "Error: Vegas GPT service not configured."}
+            
+        try:
+            if not logs and not workflow_data:
+                logger.warning("No data provided for analysis")
+                return {
+                    "errors": [],
+                    "summary": "No data available to analyze."
+                }
+            
+            # Format logs for analysis
+            log_text = self._format_logs_for_analysis(logs) if logs else "No logs available."
+            
+            # Include application context in the prompt if available
+            app_context = f"Application: {app_code}\n" if app_code else ""
+            
+            prompt = f"""
+            {app_context}Analyze the following system logs and workflow information for order processing:
+            
+            SYSTEM LOGS:
+            {log_text}
+            
+            WORKFLOW INFORMATION:
+            {workflow_data or "No workflow data available."}
+            
+            Please provide a detailed analysis with:
+            1. A list of errors found in the logs or workflow
+            2. For each error, determine:
+               - The error message
+               - The root cause of the error
+               - The severity (Critical, High, Medium, Low)
+               - The timestamp when it occurred
+               - Any server or database entities involved
+               - Any SQL errors if present
+            3. A summary of your findings including the most likely root cause
+            4. Any patterns or sequence of events that led to failures
+            5. Specific recommendations for resolving the issues
+
+            Focus on comparing the actual workflow execution with the success pattern provided.
+            Identify any discrepancies, missing tasks, failed tasks, or sequence errors.
+
+            Return your analysis in JSON format with the following structure:
+            {{
+                "errors": [
+                    {{
+                        "message": "The specific error message",
+                        "root_cause": "The determined root cause",
+                        "severity": "Critical|High|Medium|Low",
+                        "timestamp": "When the error occurred",
+                        "entities_involved": ["List", "of", "entities"],
+                        "sql_error": "Any SQL error if present, otherwise null"
+                    }}
+                ],
+                "summary": "Overall analysis summary",
+                "recommendations": ["List", "of", "recommendations"]
+            }}
+            """
+            
+            logger.debug(f"Sending data to Vegas GPT for analysis")
+            
+            # Prepare request based on the working example
+            data = {
+                "inference_type": "generate",
+                "user_id": "Synapt-Prod",
+                "agent_id": "SRE Prompt Playground Synapt",
+                "task_id": "Open Prompt SYNAPT",
+                "variables": {
+                    "{prompt}": prompt
+                },
+                "model": "VEGAS",
+                "model_settings": {
+                    "temperature": 0.2,  # Lower temperature for more predictable JSON output
+                    "max_output_tokens": 4000
+                }
+            }
+            
+            # Add trailing slash if not present
+            if not self.agents_url.endswith('/'):
+                inference_url = self.agents_url + "/inference/generate"
+            else:
+                inference_url = self.agents_url + "inference/generate"
+                
+            headers = {
+                'X-api-key': self.agents_token,
+                'Content-Type': 'application/json'
+            }
+            
+            logger.debug(f"Calling Vegas GPT API at: {inference_url}")
+            
+            # Send request to API
+            try:
+                response = requests.post(
+                    inference_url, 
+                    json=data, 
+                    headers=headers, 
+                    timeout=120  # Increased timeout for log analysis
+                )
+                
+                logger.debug(f"Vegas GPT API response status: {response.status_code}")
+                
+                if response.status_code != 200:
+                    logger.error(f"Vegas GPT API error: {response.status_code} - {response.text}")
+                    return {
+                        "errors": [],
+                        "summary": f"Error from Vegas GPT service: {response.status_code}"
+                    }
+                
+                # Extract the AI response from the JSON response
+                response_data = response.json()
+                
+                if 'ai_response' not in response_data:
+                    logger.error(f"Unexpected response format from Vegas GPT: {response_data}")
+                    return {
+                        "errors": [],
+                        "summary": "Received unexpected response format from Vegas GPT"
+                    }
+                
+                ai_response = response_data['ai_response']
+                logger.debug(f"Raw Vegas GPT response: {ai_response[:500]}...")
+                
+                # Try to extract JSON from the response
+                analysis = self._extract_json_from_response(ai_response)
+                
+                if analysis:
+                    logger.info(f"Analysis complete. Found {len(analysis.get('errors', []))} errors.")
+                    return analysis
+                else:
+                    return {
+                        "errors": [],
+                        "summary": "Failed to parse structured data from Vegas GPT response",
+                        "raw_response": ai_response[:1000]  # First 1000 chars to avoid huge logs
+                    }
+                
+            except requests.RequestException as e:
+                logger.error(f"Request error calling Vegas GPT: {str(e)}")
+                return {
+                    "errors": [],
+                    "summary": f"Error calling Vegas GPT service: {str(e)}"
+                }
+                
+        except Exception as e:
+            logger.error(f"Error analyzing logs with Vegas GPT: {str(e)}")
+            logger.error(traceback.format_exc())
+            return {
+                "errors": [],
+                "summary": f"Error during analysis: {str(e)}"
+            }
+    
+    def _format_logs_for_analysis(self, logs):
+        """Format logs into a text string for analysis."""
+        if not logs:
+            return "No logs available."
+            
+        log_text = ""
+        count = 0
+        max_logs = 500  # Limit the number of logs to prevent token overflow
+        
+        for log in logs[:max_logs]:
+            timestamp = log.get('timestamp', '')
+            level = log.get('level', 'INFO').upper()
+            message = log.get('message', '')
+            service = log.get('service', '')
+            
+            log_entry = f"[{timestamp}] [{level}] [{service}] {message}\n"
+            log_text += log_entry
+            count += 1
+            
+        if count < len(logs):
+            log_text += f"\n... {len(logs) - count} more log entries not shown ...\n"
+            
+        return log_text
+    
+    def _extract_json_from_response(self, response_text):
+        """Extract JSON from the AI service response."""
+        try:
+            # Method 1: Try to find JSON block between curly braces
+            json_start = response_text.find('{')
+            json_end = response_text.rfind('}') + 1
+            
+            if json_start >= 0 and json_end > json_start:
+                try:
+                    json_str = response_text[json_start:json_end]
+                    return json.loads(json_str)
+                except json.JSONDecodeError:
+                    logger.debug("Failed to parse full JSON block, trying alternative methods...")
+            
+            # Method 2: Try to find JSON block with code block markers
+            import re
+            json_blocks = re.findall(r'```(?:json)?\s*([\s\S]*?)\s*```', response_text)
+            
+            if json_blocks:
+                for block in json_blocks:
+                    try:
+                        # Clean up block and try to parse
+                        cleaned_block = block.strip()
+                        if cleaned_block.startswith('{') and cleaned_block.endswith('}'):
+                            return json.loads(cleaned_block)
+                    except:
+                        continue
+            
+            # Method 3: Try line by line to find possible JSON objects
+            lines = response_text.split('\n')
+            for i, line in enumerate(lines):
+                if '{' in line:
+                    # Found potential start of JSON
+                    for j in range(i, len(lines)):
+                        if '}' in lines[j]:
+                            # Found potential end of JSON
+                            json_candidate = '\n'.join(lines[i:j+1])
+                            # Extract text between { and }
+                            start = json_candidate.find('{')
+                            end = json_candidate.rfind('}') + 1
+                            if start >= 0 and end > start:
+                                try:
+                                    return json.loads(json_candidate[start:end])
+                                except:
+                                    continue
+            
+            # No valid JSON found, try to extract error information
+            logger.warning("Could not extract JSON from Vegas GPT response")
+            
+            # Create a minimal structure with any error information we can find
+            error_patterns = [
+                r'Error:.*',
+                r'Exception:.*',
+                r'.*exception.*',
+                r'.*failure.*',
+                r'.*failed.*',
+            ]
+            
+            errors = []
+            for pattern in error_patterns:
+                matches = re.findall(pattern, response_text, re.IGNORECASE)
+                for match in matches[:5]:  # Limit to first 5 matches
+                    errors.append({
+                        "message": match.strip(),
+                        "root_cause": "Unknown - extracted from unstructured response",
+                        "severity": "Unknown",
+                        "timestamp": ""
+                    })
+            
+            if errors:
+                return {
+                    "errors": errors,
+                    "summary": f"Extracted {len(errors)} potential errors from unstructured response"
+                }
+            
+            # Return empty structure if all else fails
+            return {
+                "errors": [],
+                "summary": "Could not extract structured data from Vegas GPT response"
+            }
+            
+        except Exception as e:
+            logger.error(f"Error extracting JSON from response: {str(e)}")
+            logger.error(traceback.format_exc())
+            return None
+
+    def test_connection(self):
+        """Test the connection to the Vegas GPT service."""
+        if not self.is_configured():
+            return False, "Vegas GPT Service is not configured properly - missing API token or URL"
+            
+        try:
+            # Prepare request based on the working example
+            data = {
+                "inference_type": "generate",
+                 "user_id": "Synapt-Prod",
+                "agent_id": "SRE Prompt Playground Synapt",
+                "task_id": "Open Prompt SYNAPT",
+                "variables": {
+                    "{prompt}": "Return 'Connection successful' as a simple test."
+                },
+                "model": "VEGAS",
+                "model_settings": {
+                    "temperature": 0.1,
+                    "max_output_tokens": 20
+                }
+            }
+            
+            # Add trailing slash if not present
+            if not self.agents_url.endswith('/'):
+                inference_url = self.agents_url + "/inference/generate"
+            else:
+                inference_url = self.agents_url + "inference/generate"
+                
+            headers = {
+                'X-api-key': self.agents_token,
+                'Content-Type': 'application/json'
+            }
+            
+            logger.debug(f"Testing connection to: {inference_url}")
+            logger.debug(f"Token preview: {self.agents_token[:5]}...")
+            
+            response = requests.post(
+                inference_url, 
+                json=data, 
+                headers=headers, 
+                timeout=10
+            )
+            
+            if response.status_code == 200:
+                response_json = response.json()
+                if 'ai_response' in response_json:
+                    return True, "Successfully connected to Vegas GPT service"
+                else:
+                    return False, f"Connected but received unexpected response format: {response_json}"
+            else:
+                return False, f"Failed to connect: {response.status_code} - {response.text}"
+                
+        except Exception as e:
+            logger.error(f"Error testing Vegas GPT service connection: {str(e)}")
+            logger.error(traceback.format_exc())
+            return False, f"Error connecting to Vegas GPT service: {str(e)}"
