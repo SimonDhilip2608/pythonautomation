@@ -42,7 +42,7 @@ class WorkflowService:
             headers['Content-Type'] = 'application/json'
             
             # Prepare the request payload
-            payload = {"order_number": order_number}
+            payload = {"OrderRequest": order_number}
             
             logger.debug(f"Retrieving workflow details for order: {order_number}")
             
