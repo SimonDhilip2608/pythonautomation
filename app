@@ -121,7 +121,7 @@ with st.form("log_search_form"):
     col1, col2 = st.columns(2)
     
     with col1:
-        work_order = st.text_input("Work Order Number")
+        work_order = st.text_input("ELK Transaction ID")
         start_date = st.date_input("Last Transaction Start Date")
         start_time = st.time_input("Last Transaction Start Time")
 
@@ -247,7 +247,7 @@ if submit_button:
         # Display results
         st.markdown("## Analysis Results")
         
-        tab1, tab2, tab3 = st.tabs(["Retrieved Logs", "Workflow Details", "Analysis & Insights"])
+        tab1, tab2, tab3 = st.tabs(["Retrieved Logs", "Transaction Details", "Analysis & Insights"])
         
         with tab1:
             st.subheader(f"Logs for {selected_app['app_name']} ({len(logs) if logs else 0})")
@@ -279,7 +279,7 @@ if submit_button:
                 st.warning("No logs were found for the specified criteria.")
         
         with tab2:
-            st.subheader(f"Workflow Details for Order {work_order}")
+            st.subheader(f"Transaction Details for Order {work_order}")
             
             if workflow_data:
                 st.text(f"Found {len(workflow_data)} workflow tasks")
