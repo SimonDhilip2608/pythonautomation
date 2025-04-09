@@ -162,27 +162,76 @@ class DatabaseModel:
                 DELETE FROM synapt_dev_db.workflow_success_samples WHERE application_id = %s;
                 """, (app_id,))
                 
-                # Insert success sample data for INSTALL order type
-                sample_workflow_tasks = [
-                    ("ORDNG", "INSTALL", "TranslateOrder", "Completed", "CE200", "Success", 1, True),
-                    ("ORDNG", "INSTALL", "DataCollection", "Completed", "CE200", "Success", 2, False),
-                    ("ORDNG", "INSTALL", "GetWorkOrderDetails", "Completed", "CE200", "Success", 3, True),
-                    ("ORDNG", "INSTALL", "ValidateOrder", "Completed", "CE200", "Success", 4, True),
-                    ("TNINV", "INSTALL", "Add-VOIP-TN-To-Inventory", "Completed", "CE200", "Success", 5, True),
-                    ("ACTIVN", "INSTALL", "Add-VOIP-TN-To-Broadsoft", "Completed", "CE200", "Success", 6, True),
-                    ("ACTIVN", "INSTALL", "Add-VOIP-TN-To-NSRS", "Completed", "CE200", "Success", 7, True),
-                    ("ACTIVN", "INSTALL", "Add-VOIP-TN-To-BSNS", "Completed", "CE200", "Success", 8, True),
-                    ("ORDNG", "INSTALL", "ValidateETLStatus", "Completed", "CE200", "Success", 9, False),
-                    ("ORDNG", "INSTALL", "GetActivationTaskDetails", "Completed", "CE200", "Success", 10, False)
-                ]
+                # Insert each sample task individually to avoid array formatting issues
+                cursor.execute("""
+                INSERT INTO synapt_dev_db.workflow_success_samples 
+                (application_id, domain, order_type, wf_task_name, expected_status, 
+                expected_response_code, expected_response_desc, task_sequence, is_critical)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s);
+                """, (app_id, "ORDNG", "INSTALL", "TranslateOrder", "Completed", "CE200", "Success", 1, True))
                 
-                for task in sample_workflow_tasks:
-                    cursor.execute("""
-                    INSERT INTO synapt_dev_db.workflow_success_samples 
-                    (application_id, domain, order_type, wf_task_name, expected_status, 
-                     expected_response_code, expected_response_desc, task_sequence, is_critical)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s);
-                    """, (app_id, *task))
+                cursor.execute("""
+                INSERT INTO synapt_dev_db.workflow_success_samples 
+                (application_id, domain, order_type, wf_task_name, expected_status, 
+                expected_response_code, expected_response_desc, task_sequence, is_critical)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s);
+                """, (app_id, "ORDNG", "INSTALL", "DataCollection", "Completed", "CE200", "Success", 2, False))
+                
+                cursor.execute("""
+                INSERT INTO synapt_dev_db.workflow_success_samples 
+                (application_id, domain, order_type, wf_task_name, expected_status, 
+                expected_response_code, expected_response_desc, task_sequence, is_critical)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s);
+                """, (app_id, "ORDNG", "INSTALL", "GetWorkOrderDetails", "Completed", "CE200", "Success", 3, True))
+                
+                cursor.execute("""
+                INSERT INTO synapt_dev_db.workflow_success_samples 
+                (application_id, domain, order_type, wf_task_name, expected_status, 
+                expected_response_code, expected_response_desc, task_sequence, is_critical)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s);
+                """, (app_id, "ORDNG", "INSTALL", "ValidateOrder", "Completed", "CE200", "Success", 4, True))
+                
+                cursor.execute("""
+                INSERT INTO synapt_dev_db.workflow_success_samples 
+                (application_id, domain, order_type, wf_task_name, expected_status, 
+                expected_response_code, expected_response_desc, task_sequence, is_critical)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s);
+                """, (app_id, "TNINV", "INSTALL", "Add-VOIP-TN-To-Inventory", "Completed", "CE200", "Success", 5, True))
+                
+                cursor.execute("""
+                INSERT INTO synapt_dev_db.workflow_success_samples 
+                (application_id, domain, order_type, wf_task_name, expected_status, 
+                expected_response_code, expected_response_desc, task_sequence, is_critical)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s);
+                """, (app_id, "ACTIVN", "INSTALL", "Add-VOIP-TN-To-Broadsoft", "Completed", "CE200", "Success", 6, True))
+                
+                cursor.execute("""
+                INSERT INTO synapt_dev_db.workflow_success_samples 
+                (application_id, domain, order_type, wf_task_name, expected_status, 
+                expected_response_code, expected_response_desc, task_sequence, is_critical)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s);
+                """, (app_id, "ACTIVN", "INSTALL", "Add-VOIP-TN-To-NSRS", "Completed", "CE200", "Success", 7, True))
+                
+                cursor.execute("""
+                INSERT INTO synapt_dev_db.workflow_success_samples 
+                (application_id, domain, order_type, wf_task_name, expected_status, 
+                expected_response_code, expected_response_desc, task_sequence, is_critical)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s);
+                """, (app_id, "ACTIVN", "INSTALL", "Add-VOIP-TN-To-BSNS", "Completed", "CE200", "Success", 8, True))
+                
+                cursor.execute("""
+                INSERT INTO synapt_dev_db.workflow_success_samples 
+                (application_id, domain, order_type, wf_task_name, expected_status, 
+                expected_response_code, expected_response_desc, task_sequence, is_critical)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s);
+                """, (app_id, "ORDNG", "INSTALL", "ValidateETLStatus", "Completed", "CE200", "Success", 9, False))
+                
+                cursor.execute("""
+                INSERT INTO synapt_dev_db.workflow_success_samples 
+                (application_id, domain, order_type, wf_task_name, expected_status, 
+                expected_response_code, expected_response_desc, task_sequence, is_critical)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s);
+                """, (app_id, "ORDNG", "INSTALL", "GetActivationTaskDetails", "Completed", "CE200", "Success", 10, False))
                 
                 # Insert a success pattern for INSTALL orders
                 cursor.execute("""
@@ -215,6 +264,7 @@ class DatabaseModel:
                 
         except Exception as e:
             logger.error(f"Error inserting sample data: {str(e)}")
+            logger.error(traceback.format_exc())
             if conn is not None:
                 conn.rollback()
             return False
