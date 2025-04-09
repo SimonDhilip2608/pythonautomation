@@ -1,0 +1,282 @@
+# services/workflow_analyzer.py
+import logging
+import json
+from datetime import datetime
+import traceback
+
+logger = logging.getLogger(__name__)
+
+class WorkflowAnalyzer:
+    """Service for analyzing workflow data against success patterns"""
+    
+    def __init__(self, db_model):
+        """Initialize with database model for retrieving reference data"""
+        self.db_model = db_model
+    
+    def analyze_workflow(self, workflow_data, application_id, order_type="INSTALL"):
+        """
+        Analyze workflow data by comparing against success pattern
+        
+        Args:
+            workflow_data: List of workflow steps from the Order API
+            application_id: ID of the application to get success pattern for
+            order_type: Type of order (default: INSTALL)
+            
+        Returns:
+            Dictionary with analysis results
+        """
+        if not workflow_data:
+            logger.warning("No workflow data provided for analysis")
+            return {
+                "status": "error",
+                "message": "No workflow data provided for analysis",
+                "errors": [],
+                "summary": "No workflow data to analyze"
+            }
+            
+        try:
+            # Get success pattern from database
+            success_pattern = self.db_model.get_workflow_success_pattern(application_id, order_type)
+            success_samples = self.db_model.get_success_samples(application_id, order_type)
+            
+            if not success_pattern and not success_samples:
+                logger.warning(f"No success pattern or samples found for application ID {application_id} and order type {order_type}")
+                return {
+                    "status": "error",
+                    "message": "No success pattern found for this application and order type",
+                    "errors": [],
+                    "summary": "Cannot analyze workflow without reference data"
+                }
+            
+            # Extract workflow sequence from pattern
+            expected_sequence = []
+            critical_tasks = []
+            
+            if success_pattern and 'workflow_sequence' in success_pattern:
+                if isinstance(success_pattern['workflow_sequence'], str):
+                    sequence_data = json.loads(success_pattern['workflow_sequence'])
+                else:
+                    sequence_data = success_pattern['workflow_sequence']
+                
+                for step in sequence_data:
+                    expected_sequence.append(step['task'])
+                    if step.get('critical', False):
+                        critical_tasks.append(step['task'])
+            
+            # If no pattern found but samples exist, build sequence from samples
+            if not expected_sequence and success_samples:
+                for sample in success_samples:
+                    expected_sequence.append(sample['wf_task_name'])
+                    if sample.get('is_critical', False):
+                        critical_tasks.append(sample['wf_task_name'])
+            
+            # Create lookup dictionaries for actual workflow
+            actual_tasks = {}
+            task_sequence = []
+            
+            for item in workflow_data:
+                task_name = item.get('wf_task_name')
+                if task_name:
+                    task_sequence.append(task_name)
+                    actual_tasks[task_name] = {
+                        'status': item.get('status'),
+                        'response_code': item.get('resp_status_code'),
+                        'response_desc': item.get('resp_status_desc'),
+                        'domain': item.get('domain'),
+                        'start_time': item.get('transaction_start_time'),
+                        'end_time': item.get('transaction_end_time'),
+                        'failure_details': item.get('failure_details')
+                    }
+            
+            # Compare actual workflow with expected workflow
+            missing_tasks = [task for task in expected_sequence if task not in actual_tasks]
+            extra_tasks = [task for task in task_sequence if task not in expected_sequence]
+            
+            # Check for failed or incomplete tasks
+            failed_tasks = []
+            errors = []
+            
+            for task in task_sequence:
+                task_info = actual_tasks[task]
+                
+                # Check if this task has a corresponding success sample
+                expected_status = None
+                expected_code = None
+                expected_desc = None
+                is_critical = task in critical_tasks
+                
+                for sample in success_samples:
+                    if sample['wf_task_name'] == task:
+                        expected_status = sample['expected_status']
+                        expected_code = sample['expected_response_code']
+                        expected_desc = sample['expected_response_desc']
+                        is_critical = sample.get('is_critical', False)
+                        break
+                
+                # If task failed or doesn't match expected values
+                actual_status = task_info['status']
+                actual_code = task_info['response_code']
+                
+                if (expected_status and actual_status != expected_status) or \
+                   (expected_code and actual_code != expected_code) or \
+                   actual_status != 'Completed':
+                    failed_tasks.append(task)
+                    
+                    severity = "Critical" if is_critical else "Medium"
+                    error_detail = {
+                        "task": task,
+                        "domain": task_info['domain'],
+                        "actual_status": actual_status,
+                        "expected_status": expected_status,
+                        "actual_code": actual_code,
+                        "expected_code": expected_code,
+                        "severity": severity,
+                        "timestamp": task_info['start_time'],
+                        "is_critical": is_critical
+                    }
+                    
+                    # Add failure details if available
+                    if task_info.get('failure_details'):
+                        error_detail["failure_details"] = task_info['failure_details']
+                    
+                    # Create error message
+                    error_message = f"Task '{task}' "
+                    if actual_status != expected_status:
+                        error_message += f"has status '{actual_status}' (expected: '{expected_status}') "
+                    if actual_code != expected_code:
+                        error_message += f"with response code '{actual_code}' (expected: '{expected_code}') "
+                    
+                    errors.append({
+                        "message": error_message.strip(),
+                        "severity": severity,
+                        "root_cause": "Task execution failed or returned unexpected status/code",
+                        "timestamp": task_info['start_time'],
+                        "detail": error_detail
+                    })
+            
+            # Check sequence order
+            sequence_errors = []
+            expected_indices = {task: i for i, task in enumerate(expected_sequence)}
+            
+            prev_idx = -1
+            for task in task_sequence:
+                if task in expected_indices:
+                    curr_idx = expected_indices[task]
+                    if curr_idx < prev_idx:
+                        sequence_errors.append({
+                            "message": f"Task '{task}' executed out of sequence",
+                            "severity": "Medium",
+                            "root_cause": "Tasks executed in incorrect order",
+                            "timestamp": actual_tasks[task]['start_time'],
+                            "detail": {
+                                "task": task,
+                                "expected_position": curr_idx,
+                                "actual_position": task_sequence.index(task)
+                            }
+                        })
+                    prev_idx = curr_idx
+            
+            # Create final analysis result
+            result = {
+                "status": "success",
+                "workflow_info": {
+                    "total_tasks": len(task_sequence),
+                    "missing_tasks": missing_tasks,
+                    "extra_tasks": extra_tasks,
+                    "failed_tasks": failed_tasks,
+                    "sequence_errors": len(sequence_errors) > 0,
+                    "expected_sequence": expected_sequence,
+                    "actual_sequence": task_sequence
+                },
+                "errors": errors + sequence_errors,
+                "critical_errors": [err for err in errors if err["severity"] == "Critical"],
+                "timestamp": datetime.now().isoformat()
+            }
+            
+            # Add summary based on analysis
+            if not errors and not sequence_errors and not missing_tasks:
+                result["summary"] = "Workflow executed successfully and matches expected pattern"
+            else:
+                issues = []
+                if failed_tasks:
+                    critical_fails = [t for t in failed_tasks if t in critical_tasks]
+                    if critical_fails:
+                        issues.append(f"{len(critical_fails)} critical tasks failed")
+                    else:
+                        issues.append(f"{len(failed_tasks)} tasks failed")
+                
+                if missing_tasks:
+                    critical_missing = [t for t in missing_tasks if t in critical_tasks]
+                    if critical_missing:
+                        issues.append(f"{len(critical_missing)} critical tasks missing")
+                    else:
+                        issues.append(f"{len(missing_tasks)} tasks missing")
+                
+                if sequence_errors:
+                    issues.append("tasks executed out of sequence")
+                
+                result["summary"] = f"Workflow execution has issues: {', '.join(issues)}"
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"Error analyzing workflow: {str(e)}")
+            logger.error(traceback.format_exc())
+            return {
+                "status": "error",
+                "message": f"Error analyzing workflow: {str(e)}",
+                "errors": [],
+                "summary": "An error occurred during workflow analysis"
+            }
+            
+    def format_analysis_for_ai(self, analysis_result):
+        """Format workflow analysis results for AI processing"""
+        if not analysis_result:
+            return "No workflow analysis available."
+        
+        try:
+            formatted_text = "WORKFLOW ANALYSIS RESULTS:\n\n"
+            
+            # Add summary
+            formatted_text += f"Summary: {analysis_result.get('summary', 'No summary available')}\n\n"
+            
+            # Add workflow info
+            workflow_info = analysis_result.get('workflow_info', {})
+            formatted_text += "Workflow Information:\n"
+            formatted_text += f"- Total Tasks: {workflow_info.get('total_tasks', 0)}\n"
+            
+            if workflow_info.get('missing_tasks'):
+                formatted_text += f"- Missing Tasks: {', '.join(workflow_info.get('missing_tasks'))}\n"
+            
+            if workflow_info.get('failed_tasks'):
+                formatted_text += f"- Failed Tasks: {', '.join(workflow_info.get('failed_tasks'))}\n"
+            
+            if workflow_info.get('sequence_errors'):
+                formatted_text += "- Sequence Errors: Yes (tasks executed out of order)\n"
+            
+            # Add detailed errors
+            if analysis_result.get('errors'):
+                formatted_text += "\nDetailed Errors:\n"
+                
+                for i, error in enumerate(analysis_result.get('errors', [])):
+                    formatted_text += f"{i+1}. {error.get('message', 'Unknown error')}\n"
+                    formatted_text += f"   Severity: {error.get('severity', 'Unknown')}\n"
+                    formatted_text += f"   Root Cause: {error.get('root_cause', 'Unknown')}\n"
+                    
+                    if 'detail' in error:
+                        detail = error['detail']
+                        formatted_text += f"   Task: {detail.get('task', 'Unknown')}\n"
+                        
+                        if 'actual_status' in detail and 'expected_status' in detail:
+                            formatted_text += f"   Status: {detail.get('actual_status')} (Expected: {detail.get('expected_status')})\n"
+                        
+                        if 'actual_code' in detail and 'expected_code' in detail:
+                            formatted_text += f"   Response Code: {detail.get('actual_code')} (Expected: {detail.get('expected_code')})\n"
+                    
+                    formatted_text += "\n"
+            
+            return formatted_text
+            
+        except Exception as e:
+            logger.error(f"Error formatting analysis for AI: {str(e)}")
+            return f"Error formatting workflow analysis: {str(e)}"
