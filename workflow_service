@@ -1,0 +1,133 @@
+# services/workflow_service.py
+import os
+import logging
+import requests
+import json
+import traceback
+
+logger = logging.getLogger(__name__)
+
+class WorkflowService:
+    """Service for retrieving workflow details from the order service API."""
+    
+    def __init__(self):
+        """Initialize the Workflow service with API endpoint from environment."""
+        self.api_url = os.getenv('WORKFLOW_API_URL', 'http://10.139.111.18:8000')
+        self.api_key = os.getenv('WORKFLOW_API_KEY', '')
+        
+        # Debug logging for configuration
+        if not self.api_url:
+            logger.warning("WORKFLOW_API_URL environment variable is not set, using default")
+        
+        logger.info(f"Workflow Service initialized with URL: {self.api_url}")
+    
+    def is_configured(self):
+        """Check if the service is properly configured."""
+        return bool(self.api_url)
+    
+    def get_workflow_details(self, order_number):
+        """Retrieve workflow details for a specific order number."""
+        if not order_number:
+            logger.error("No order number provided to retrieve workflow details")
+            return None
+            
+        try:
+            # Construct the API endpoint URL
+            endpoint = f"{self.api_url}/Search_Order_Number/"
+            
+            # Prepare headers with API key if available
+            headers = {}
+            if self.api_key:
+                headers['Authorization'] = f"Bearer {self.api_key}"
+            headers['Content-Type'] = 'application/json'
+            
+            # Prepare the request payload
+            payload = {"OrderRequest": order_number}
+            
+            logger.debug(f"Retrieving workflow details for order: {order_number}")
+            
+            # Make the API request
+            response = requests.post(
+                endpoint,
+                json=payload,
+                headers=headers,
+                timeout=30  # 30 second timeout
+            )
+            
+            # Check the response status
+            if response.status_code != 200:
+                logger.error(f"Error retrieving workflow details: Status {response.status_code} - {response.text}")
+                return None
+            
+            # Parse the response
+            workflow_data = response.json()
+            
+            if not workflow_data:
+                logger.warning(f"No workflow details found for order number: {order_number}")
+                return []
+            
+            logger.info(f"Successfully retrieved workflow details for order: {order_number}")
+            
+            # Return the workflow data
+            return workflow_data
+            
+        except requests.RequestException as e:
+            logger.error(f"Request error retrieving workflow details: {str(e)}")
+            return None
+        except Exception as e:
+            logger.error(f"Error retrieving workflow details: {str(e)}")
+            logger.error(traceback.format_exc())
+            return None
+    
+    def test_connection(self):
+        """Test the connection to the Workflow API."""
+        if not self.is_configured():
+            return False, "Workflow API Service is not configured properly"
+            
+        try:
+            # Try to connect to the API root endpoint or a health endpoint if available
+            response = requests.post(
+                f"{self.api_url}/docs" if "/docs" in self.api_url else self.api_url,
+                timeout=5
+            )
+            
+            if response.status_code < 500:  # Accept any non-server error response as "connected"
+                return True, f"Connected to Workflow API (status: {response.status_code})"
+            else:
+                return False, f"Failed to connect to Workflow API: {response.status_code}"
+                
+        except Exception as e:
+            logger.error(f"Error testing Workflow API connection: {str(e)}")
+            return False, f"Error connecting to Workflow API: {str(e)}"
+            
+    def format_workflow_for_analysis(self, workflow_data):
+        """Format workflow data for AI analysis."""
+        if not workflow_data:
+            return "No workflow data available."
+        
+        try:
+            # Pretty print the workflow data
+            workflow_text = "WORKFLOW DETAILS:\n\n"
+            
+            for item in workflow_data:
+                workflow_text += f"Task: {item.get('wf_task_name', 'Unknown')}\n"
+                workflow_text += f"Status: {item.get('status', 'Unknown')}\n"
+                workflow_text += f"Domain: {item.get('domain', 'Unknown')}\n"
+                workflow_text += f"Response Code: {item.get('resp_status_code', 'Unknown')}\n"
+                workflow_text += f"Response Description: {item.get('resp_status_desc', 'Unknown')}\n"
+                workflow_text += f"Start Time: {item.get('transaction_start_time', 'Unknown')}\n"
+                workflow_text += f"End Time: {item.get('transaction_end_time', 'Unknown')}\n"
+                
+                # Add any failure details if available
+                if item.get('failure_details'):
+                    workflow_text += "Failure Details:\n"
+                    workflow_text += json.dumps(item.get('failure_details'), indent=2)
+                    workflow_text += "\n"
+                
+                workflow_text += "\n---\n\n"
+            
+            return workflow_text
+            
+        except Exception as e:
+            logger.error(f"Error formatting workflow data: {str(e)}")
+            return "Error formatting workflow data."
