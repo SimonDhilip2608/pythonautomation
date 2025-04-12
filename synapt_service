@@ -1,0 +1,223 @@
+# services/synapt_service.py
+import os
+import logging
+import psycopg2
+from psycopg2.extras import RealDictCursor  # For returning results as dictionaries
+
+logger = logging.getLogger(__name__)
+
+class SynaptService:
+    """Service for retrieving solutions from Synapt PostgreSQL database."""
+    
+    def __init__(self):
+        """Initialize the Synapt PostgreSQL database connection."""
+        self.db_host = os.getenv('SYNAPT_DB_HOST')
+        self.db_port = os.getenv('SYNAPT_DB_PORT')
+        self.db_name = os.getenv('SYNAPT_DB')
+        self.db_user = os.getenv('SYNAPT_USER')
+        self.db_password = os.getenv('SYNAPT_PASSWORD')
+        
+        self.conn = None
+    
+    def is_configured(self):
+        """Check if the service is properly configured."""
+        return bool(self.db_host and self.db_name and self.db_user and self.db_password and self.db_port)
+    
+    def get_connection(self):
+        """Get a database connection."""
+        if not self.is_configured():
+            logger.error("Synapt database not configured properly")
+            return None
+            
+        try:
+            if self.conn is None or self.conn.closed:
+                self.conn = psycopg2.connect(
+                    host=self.db_host,
+                    port=self.db_port,
+                    dbname=self.db_name,
+                    user=self.db_user,
+                    password=self.db_password
+                )
+            return self.conn
+        except Exception as e:
+            logger.error(f"Error connecting to Synapt database: {str(e)}")
+            return None
+    
+    def test_connection(self):
+        """Test the connection to the Synapt database."""
+        if not self.is_configured():
+            return False, "Synapt database is not configured properly"
+            
+        try:
+            conn = self.get_connection()
+            if conn is None:
+                return False, "Could not establish database connection"
+                
+            with conn.cursor() as cursor:
+                cursor.execute("SELECT version();")
+                db_version = cursor.fetchone()[0]
+                return True, f"Successfully connected to PostgreSQL: {db_version}"
+                
+        except Exception as e:
+            logger.error(f"Error testing Synapt database connection: {str(e)}")
+            return False, f"Error connecting to Synapt database: {str(e)}"
+    
+    def close_connection(self):
+        """Close the database connection."""
+        if self.conn is not None and not self.conn.closed:
+            self.conn.close()
+            self.conn = None
+
+    def get_applications(self):
+        """Retrieve the list of applications from the database."""
+        try:
+            conn = self.get_connection()
+            if conn is None:
+                logger.error("Could not connect to database to retrieve applications")
+                return []
+                
+            with conn.cursor(cursor_factory=RealDictCursor) as cursor:
+                query = """
+                SELECT 
+                    id, 
+                    app_name, 
+                    app_code, 
+                    description
+                FROM 
+                    synapt_dev_db.applications
+                WHERE 
+                    is_active = TRUE
+                ORDER BY 
+                    app_name;
+                """
+                
+                cursor.execute(query)
+                applications = cursor.fetchall()
+                
+                logger.info(f"Retrieved {len(applications)} applications from database")
+                return applications
+                
+        except Exception as e:
+            logger.error(f"Error retrieving applications from database: {str(e)}")
+            return []
+
+    def get_application_log_settings(self, application_id):
+        """Retrieve ELK log settings for a specific application."""
+        try:
+            conn = self.get_connection()
+            if conn is None:
+                logger.error("Could not connect to database to retrieve log settings")
+                return None
+                
+            with conn.cursor(cursor_factory=RealDictCursor) as cursor:
+                query = """
+                SELECT 
+                    als.elk_index,
+                    als.elk_query_fields,
+                    a.app_code
+                FROM 
+                    synapt_dev_db.app_log_settings als
+                JOIN
+                    synapt_dev_db.applications a ON als.application_id = a.id
+                WHERE 
+                    als.application_id = %s;
+                """
+                
+                cursor.execute(query, (application_id,))
+                log_settings = cursor.fetchone()
+                
+                if log_settings:
+                    logger.info(f"Retrieved log settings for application ID {application_id}")
+                    return log_settings
+                else:
+                    logger.warning(f"No log settings found for application ID {application_id}")
+                    return None
+                
+        except Exception as e:
+            logger.error(f"Error retrieving log settings from database: {str(e)}")
+            return None
+    
+    def find_solutions(self, errors, application_id=None):
+        """Find solutions for errors, optionally filtered by application."""
+        try:
+            if not errors:
+                logger.warning("No errors provided to find solutions for")
+                return {
+                    "recommendations": [],
+                    "summary": "No errors to find solutions for."
+                }
+            
+            # Since we're now using the database for success patterns and not solutions,
+            # we'll create a more generic response based on the workflow analysis
+            recommendations = []
+            
+            for error in errors:
+                severity = error.get('severity', 'Unknown')
+                message = error.get('message', '')
+                root_cause = error.get('root_cause', 'Unknown')
+                
+                # Create general recommendations based on the error type
+                if 'missing' in root_cause.lower() or 'missing' in message.lower():
+                    recommendations.append({
+                        "error": message,
+                        "solution": "Ensure the missing workflow step is properly configured and all required services are available.",
+                        "confidence": 0.7,
+                        "steps": [
+                            "Check connectivity to the service responsible for this task",
+                            "Verify the task is properly configured in the workflow engine",
+                            "Inspect service logs for any initialization errors"
+                        ]
+                    })
+                elif 'failed' in root_cause.lower() or 'failed' in message.lower():
+                    recommendations.append({
+                        "error": message,
+                        "solution": "Investigate the failure cause and retry the operation after addressing the root cause.",
+                        "confidence": 0.8,
+                        "steps": [
+                            "Review the detailed error message for specific failure information",
+                            "Check the service responsible for this task",
+                            "Verify input parameters are correct",
+                            "Ensure dependent services are operational"
+                        ]
+                    })
+                elif 'sequence' in root_cause.lower() or 'order' in root_cause.lower():
+                    recommendations.append({
+                        "error": message,
+                        "solution": "Task execution sequence is incorrect. Ensure workflow steps are executing in the proper order.",
+                        "confidence": 0.75,
+                        "steps": [
+                            "Review workflow configuration",
+                            "Check for race conditions or timing issues",
+                            "Ensure prerequisites are met before task execution begins"
+                        ]
+                    })
+                else:
+                    # Generic recommendation
+                    recommendations.append({
+                        "error": message,
+                        "solution": "Generic solution based on error analysis.",
+                        "confidence": 0.5,
+                        "steps": [
+                            "Analyze complete logs for more context",
+                            "Confirm all services are operational",
+                            "Check for recent changes or deployments that might affect the workflow"
+                        ]
+                    })
+            
+            solution_response = {
+                "recommendations": recommendations,
+                "summary": f"Generated {len(recommendations)} recommendation(s) based on error analysis."
+            }
+            
+            return solution_response
+            
+        except Exception as e:
+            logger.error(f"Error generating recommendations: {str(e)}")
+            return {
+                "recommendations": [],
+                "summary": f"Error generating recommendations: {str(e)}"
+            }
+    
+    def __del__(self):
+        """Close connection when object is destroyed."""
+        self.close_connection()
