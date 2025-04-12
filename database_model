@@ -1,0 +1,284 @@
+# database_model.py
+import os
+import logging
+import psycopg2
+from psycopg2.extras import RealDictCursor
+import json
+
+logger = logging.getLogger(__name__)
+
+class DatabaseModel:
+    """Database model for storing and retrieving reference workflow samples"""
+    
+    def __init__(self):
+        """Initialize the database connection from environment variables"""
+        self.db_host = os.getenv('SYNAPT_DB_HOST')
+        self.db_port = os.getenv('SYNAPT_DB_PORT')
+        self.db_name = os.getenv('SYNAPT_DB')
+        self.db_user = os.getenv('SYNAPT_USER')
+        self.db_password = os.getenv('SYNAPT_PASSWORD')
+        
+        self.conn = None
+        
+    def get_connection(self):
+        """Get a database connection"""
+        try:
+            if self.conn is None or self.conn.closed:
+                self.conn = psycopg2.connect(
+                    host=self.db_host,
+                    port=self.db_port,
+                    dbname=self.db_name,
+                    user=self.db_user,
+                    password=self.db_password
+                )
+            return self.conn
+        except Exception as e:
+            logger.error(f"Error connecting to database: {str(e)}")
+            return None
+            
+    def close_connection(self):
+        """Close the database connection"""
+        if self.conn is not None and not self.conn.closed:
+            self.conn.close()
+            self.conn = None
+            
+    def init_database(self):
+        """Initialize the database schema if it doesn't exist"""
+        try:
+            conn = self.get_connection()
+            if conn is None:
+                logger.error("Could not connect to database to initialize schema")
+                return False
+                
+            with conn.cursor() as cursor:
+                # Create schema if it doesn't exist
+                cursor.execute("""
+                CREATE SCHEMA IF NOT EXISTS synapt_dev_db;
+                """)
+                
+                # Create applications table if it doesn't exist
+                cursor.execute("""
+                CREATE TABLE IF NOT EXISTS synapt_dev_db.applications (
+                    id SERIAL PRIMARY KEY,
+                    app_name VARCHAR(100) NOT NULL,
+                    app_code VARCHAR(50) NOT NULL,
+                    description TEXT,
+                    is_active BOOLEAN DEFAULT TRUE
+                );
+                """)
+                
+                # Create app_log_settings table if it doesn't exist
+                cursor.execute("""
+                CREATE TABLE IF NOT EXISTS synapt_dev_db.app_log_settings (
+                    id SERIAL PRIMARY KEY,
+                    application_id INTEGER REFERENCES synapt_dev_db.applications(id),
+                    elk_index VARCHAR(100),
+                    elk_query_fields TEXT
+                );
+                """)
+                
+                # Create workflow_success_samples table for storing reference workflow patterns
+                cursor.execute("""
+                CREATE TABLE IF NOT EXISTS synapt_dev_db.workflow_success_samples (
+                    id SERIAL PRIMARY KEY,
+                    application_id INTEGER REFERENCES synapt_dev_db.applications(id),
+                    domain VARCHAR(50),
+                    order_type VARCHAR(50),
+                    wf_task_name VARCHAR(100),
+                    expected_status VARCHAR(50),
+                    expected_response_code VARCHAR(50),
+                    expected_response_desc TEXT,
+                    task_sequence INTEGER,
+                    is_critical BOOLEAN DEFAULT FALSE,
+                    notes TEXT
+                );
+                """)
+                
+                # Create table for workflow sequence patterns
+                cursor.execute("""
+                CREATE TABLE IF NOT EXISTS synapt_dev_db.workflow_patterns (
+                    id SERIAL PRIMARY KEY,
+                    application_id INTEGER REFERENCES synapt_dev_db.applications(id),
+                    order_type VARCHAR(50),
+                    pattern_name VARCHAR(100),
+                    workflow_sequence JSONB,
+                    is_success_pattern BOOLEAN DEFAULT TRUE,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                );
+                """)
+                
+                conn.commit()
+                logger.info("Database schema initialized successfully")
+                return True
+                
+        except Exception as e:
+            logger.error(f"Error initializing database schema: {str(e)}")
+            if conn is not None:
+                conn.rollback()
+            return False
+            
+    def insert_sample_data(self):
+        """Insert sample data into the database for testing"""
+        try:
+            conn = self.get_connection()
+            if conn is None:
+                logger.error("Could not connect to database to insert sample data")
+                return False
+                
+            with conn.cursor() as cursor:
+                # Check if app exists
+                cursor.execute("""
+                SELECT id FROM synapt_dev_db.applications WHERE app_code = 'ORDNG';
+                """)
+                
+                app_id = cursor.fetchone()
+                
+                if app_id is None:
+                    # Insert sample application
+                    cursor.execute("""
+                    INSERT INTO synapt_dev_db.applications (app_name, app_code, description, is_active)
+                    VALUES ('Order Management', 'ORDNG', 'Order Management Application', TRUE)
+                    RETURNING id;
+                    """)
+                    app_id = cursor.fetchone()[0]
+                else:
+                    app_id = app_id[0]
+                
+                # Check if app_log_settings exist for this app
+                cursor.execute("""
+                SELECT id FROM synapt_dev_db.app_log_settings WHERE application_id = %s;
+                """, (app_id,))
+                
+                if cursor.fetchone() is None:
+                    # Insert log settings
+                    cursor.execute("""
+                    INSERT INTO synapt_dev_db.app_log_settings (application_id, elk_index, elk_query_fields)
+                    VALUES (%s, 'logs-*', 'order_number,wf_task_name,status');
+                    """, (app_id,))
+                
+                # Insert workflow success samples based on the provided JSON data
+                # First, clear existing samples for this app to avoid duplicates
+                cursor.execute("""
+                DELETE FROM synapt_dev_db.workflow_success_samples WHERE application_id = %s;
+                """, (app_id,))
+                
+                # Insert success sample data for INSTALL order type
+                sample_workflow_tasks = [
+                    ("ORDNG", "INSTALL", "TranslateOrder", "Completed", "CE200", "Success", 1, True),
+                    ("ORDNG", "INSTALL", "DataCollection", "Completed", "CE200", "Success", 2, False),
+                    ("ORDNG", "INSTALL", "GetWorkOrderDetails", "Completed", "CE200", "Success", 3, True),
+                    ("ORDNG", "INSTALL", "ValidateOrder", "Completed", "CE200", "Success", 4, True),
+                    ("TNINV", "INSTALL", "Add-VOIP-TN-To-Inventory", "Completed", "CE200", "Success", 5, True),
+                    ("ACTIVN", "INSTALL", "Add-VOIP-TN-To-Broadsoft", "Completed", "CE200", "Success", 6, True),
+                    ("ACTIVN", "INSTALL", "Add-VOIP-TN-To-NSRS", "Completed", "CE200", "Success", 7, True),
+                    ("ACTIVN", "INSTALL", "Add-VOIP-TN-To-BSNS", "Completed", "CE200", "Success", 8, True),
+                    ("ORDNG", "INSTALL", "ValidateETLStatus", "Completed", "CE200", "Success", 9, False),
+                    ("ORDNG", "INSTALL", "GetActivationTaskDetails", "Completed", "CE200", "Success", 10, False)
+                ]
+                
+                for task in sample_workflow_tasks:
+                    cursor.execute("""
+                    INSERT INTO synapt_dev_db.workflow_success_samples 
+                    (application_id, domain, order_type, wf_task_name, expected_status, 
+                     expected_response_code, expected_response_desc, task_sequence, is_critical)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s);
+                    """, (app_id, *task))
+                
+                # Insert a success pattern for INSTALL orders
+                cursor.execute("""
+                DELETE FROM synapt_dev_db.workflow_patterns WHERE application_id = %s AND order_type = 'INSTALL';
+                """, (app_id,))
+                
+                # Create a workflow pattern with sequence of tasks
+                workflow_sequence = [
+                    {"task": "TranslateOrder", "domain": "ORDNG", "critical": True},
+                    {"task": "DataCollection", "domain": "ORDNG", "critical": False},
+                    {"task": "GetWorkOrderDetails", "domain": "ORDNG", "critical": True},
+                    {"task": "ValidateOrder", "domain": "ORDNG", "critical": True},
+                    {"task": "Add-VOIP-TN-To-Inventory", "domain": "TNINV", "critical": True},
+                    {"task": "Add-VOIP-TN-To-Broadsoft", "domain": "ACTIVN", "critical": True},
+                    {"task": "Add-VOIP-TN-To-NSRS", "domain": "ACTIVN", "critical": True},
+                    {"task": "Add-VOIP-TN-To-BSNS", "domain": "ACTIVN", "critical": True},
+                    {"task": "ValidateETLStatus", "domain": "ORDNG", "critical": False},
+                    {"task": "GetActivationTaskDetails", "domain": "ORDNG", "critical": False}
+                ]
+                
+                cursor.execute("""
+                INSERT INTO synapt_dev_db.workflow_patterns
+                (application_id, order_type, pattern_name, workflow_sequence, is_success_pattern)
+                VALUES (%s, %s, %s, %s, %s);
+                """, (app_id, "INSTALL", "Standard VOIP Install", json.dumps(workflow_sequence), True))
+                
+                conn.commit()
+                logger.info(f"Sample data inserted successfully for application ID {app_id}")
+                return True
+                
+        except Exception as e:
+            logger.error(f"Error inserting sample data: {str(e)}")
+            if conn is not None:
+                conn.rollback()
+            return False
+    
+    def get_workflow_success_pattern(self, application_id, order_type="INSTALL"):
+        """Get the success pattern for a specific application and order type"""
+        try:
+            conn = self.get_connection()
+            if conn is None:
+                logger.error("Could not connect to database to get workflow pattern")
+                return None
+                
+            with conn.cursor(cursor_factory=RealDictCursor) as cursor:
+                cursor.execute("""
+                SELECT id, application_id, order_type, pattern_name, 
+                       workflow_sequence, is_success_pattern
+                FROM synapt_dev_db.workflow_patterns
+                WHERE application_id = %s
+                AND order_type = %s
+                AND is_success_pattern = TRUE
+                LIMIT 1;
+                """, (application_id, order_type))
+                
+                pattern = cursor.fetchone()
+                
+                if pattern:
+                    logger.info(f"Found workflow pattern for application ID {application_id} and order type {order_type}")
+                    return pattern
+                else:
+                    logger.warning(f"No workflow pattern found for application ID {application_id} and order type {order_type}")
+                    return None
+                    
+        except Exception as e:
+            logger.error(f"Error retrieving workflow pattern: {str(e)}")
+            return None
+    
+    def get_success_samples(self, application_id, order_type="INSTALL"):
+        """Get the success samples for a specific application and order type"""
+        try:
+            conn = self.get_connection()
+            if conn is None:
+                logger.error("Could not connect to database to get success samples")
+                return None
+                
+            with conn.cursor(cursor_factory=RealDictCursor) as cursor:
+                cursor.execute("""
+                SELECT id, application_id, domain, order_type, wf_task_name,
+                       expected_status, expected_response_code, expected_response_desc,
+                       task_sequence, is_critical, notes
+                FROM synapt_dev_db.workflow_success_samples
+                WHERE application_id = %s
+                AND order_type = %s
+                ORDER BY task_sequence;
+                """, (application_id, order_type))
+                
+                samples = cursor.fetchall()
+                
+                if samples:
+                    logger.info(f"Found {len(samples)} success samples for application ID {application_id} and order type {order_type}")
+                    return samples
+                else:
+                    logger.warning(f"No success samples found for application ID {application_id} and order type {order_type}")
+                    return []
+                    
+        except Exception as e:
+            logger.error(f"Error retrieving success samples: {str(e)}")
+            return []
